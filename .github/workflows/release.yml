@@ -53,16 +53,16 @@ jobs:
           $version = $env:GITHUB_REF_NAME.TrimStart('v')
           $releaseDate = (Get-Date).ToUniversalTime().ToString('o')
           $metadata = @"
-version: $version
-files:
-  - url: $($setup.Name)
-    sha512: $sha512
-    size: $($setup.Length)
-path: $($setup.Name)
-sha512: $sha512
-size: $($setup.Length)
-releaseDate: $releaseDate
-"@
+          version: $version
+          files:
+            - url: $($setup.Name)
+              sha512: $sha512
+              size: $($setup.Length)
+          path: $($setup.Name)
+          sha512: $sha512
+          size: $($setup.Length)
+          releaseDate: $releaseDate
+          "@
           [System.IO.File]::WriteAllText((Join-Path $PWD 'dist/latest.yml'), $metadata, (New-Object System.Text.UTF8Encoding($false)))
 
       - name: Publish GitHub Release
