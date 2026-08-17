@@ -43,4 +43,17 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "${GITHUB_REF_NAME}" dist/* --title "Prime Video Logo ${GITHUB_REF_NAME}" --generate-notes
+        run: |
+          set -e
+          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" dist/*.exe dist/latest.yml --repo "${GITHUB_REPOSITORY}" --clobber
+          else
+            for attempt in 1 2 3; do
+              if gh release create "${GITHUB_REF_NAME}" dist/*.exe dist/latest.yml --repo "${GITHUB_REPOSITORY}" --title "Prime Video Logo ${GITHUB_REF_NAME}" --generate-notes; then
+                exit 0
+              fi
+              echo "GitHub Release denemesi ${attempt} başarısız oldu; yeniden deneniyor..."
+              sleep 20
+            done
+            exit 1
+          fi
