@@ -42,7 +42,10 @@ async function processOne(index, total, video, settings, historyHashes, ffmpegPa
   const x = Math.max(0, Math.min(1 - logoW, Number(settings.logoX) || 0.74));
   const y = Math.max(0, Math.min(0.8, Number(settings.logoY) || 0.05));
   const opacity = Math.max(0.05, Math.min(1, Number(settings.opacity) || 1));
-  const filter = `[0:v]scale=iw*max(720/iw\\,1280/ih):ih*max(720/iw\\,1280/ih),crop=720:1280:(in_w-720)/2:(in_h-1280)/2,setsar=1[base];[1:v]format=rgba,colorchannelmixer=aa=${opacity},scale=iw*${logoW}/0.22:-1[logo];[base][logo]overlay=x='(main_w-overlay_w)*${x / (1 - logoW)}':y='main_h*${y}':eval=frame[out]`;
+  const logoWidthPx = Math.max(2, Math.round(720 * logoW / 2) * 2);
+  const logoXPx = Math.max(0, Math.round(720 * x));
+  const logoYPx = Math.max(0, Math.round(1280 * y));
+  const filter = `[0:v]scale=iw*max(720/iw\\,1280/ih):ih*max(720/iw\\,1280/ih),crop=720:1280:(in_w-720)/2:(in_h-1280)/2,setsar=1[base];[1:v]format=rgba,colorchannelmixer=aa=${opacity},scale=w=${logoWidthPx}:h=-1[logo];[base][logo]overlay=x=${logoXPx}:y=${logoYPx}:eval=frame[out]`;
   const args = ['-y', '-hide_banner', '-i', video.path, '-i', settings.logoPath, '-filter_complex', filter, '-map', '[out]', '-map', '0:a?', '-c:v', 'libx264', '-preset', 'veryfast', '-threads', '0', '-crf', '20', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', outputPath];
   const job = { name: video.name, status: 'processing', progress: 0, message: 'Hazırlanıyor' };
   sendProgress(index, total, job);
