@@ -1,0 +1,55 @@
+{
+  "name": "prime-video-logo",
+  "version": "1.0.0",
+  "description": "Prime Video Logo - seri video logo ve 9:16 dönüştürme masaüstü uygulaması",
+  "main": "main.js",
+  "author": "Prime Video Logo",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "pack:dir": "electron-builder --win dir",
+    "build:win": "electron-builder --win nsis portable"
+  },
+  "devDependencies": {
+    "electron": "^37.2.6",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.primevideologo.app",
+    "productName": "Prime Video Logo",
+    "directories": { "output": "dist" },
+    "files": [
+      "**/*",
+      "!design-mockup.png",
+      "!dist/**/*",
+      "!node_modules/.cache/**/*"
+    ],
+    "extraResources": [
+      { "from": "vendor/ffmpeg/ffmpeg.exe", "to": "ffmpeg/ffmpeg.exe" },
+      { "from": "assets/logo.png", "to": "assets/logo.png" }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "artifactName": "PrimeVideoLogo-Setup-${version}.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Prime Video Logo",
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "PrimeVideoLogo-Portable-${version}.${ext}"
+    },
+    "publish": [
+      { "provider": "github", "owner": "Kezzapci", "repo": "prime-video-logo", "releaseType": "release" }
+    ]
+  }
+}
