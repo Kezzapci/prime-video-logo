@@ -2,6 +2,8 @@ node_modules/
 dist/
 release/
 design-mockup.png
+ultra-preview.png
+ultra-ui-visual-check.md
 vendor/ffmpeg/ffmpeg.exe
 /tmp/
 .DS_Store

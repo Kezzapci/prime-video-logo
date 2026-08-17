@@ -50,3 +50,12 @@ Arka plan video worker’ı, Edilmiş Videolar varsayılan çıktı klasörü ve
 - İndirme yarıda kalırsa geçici dosya temizleniyor ve kullanıcı dostu hata gösteriliyor.
 - Güncelleme kurulumu uygulamayı güvenli şekilde kapatıp setup’ı sessiz kurulumla başlatıyor.
 - FFmpeg ve gerekli Windows bileşenleri setup içine dahil edilmeye devam ediyor.
+
+## v1.5.0 — Ultra Studio arayüzü
+
+- Ana ekran tamamen yenilendi: ambient arka plan, premium dashboard, animasyonlu durum kartları ve üç panelli çalışma alanı.
+- 500+ video için sanal kaynak listesi ve sanal render kuyruğu korundu; görünmeyen satırlar DOM’a yüklenmiyor.
+- Thumbnail üretimi lazy kuyrukla sınırlandı; aynı anda en fazla iki ön izleme işi çalışıyor.
+- 9:16 kompozisyon ön izlemesi, serbest logo sürükleme alanı ve marka hak sahipliği imzası yeni görsel kabuğa bağlandı.
+- Otomatik onarım, GitHub public Release güncellemesi, ses koruma ve arka plan worker akışı korunarak yeni tasarıma taşındı.
+- `ultra-ambient-bg.png` yeni premium görsel varlık olarak eklendi.

@@ -39,6 +39,32 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Generate updater metadata
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem -Path dist -Filter 'PrimeVideoLogo-Setup-*.exe' | Select-Object -First 1
+          if (-not $setup) { throw 'NSIS setup bulunamadı.' }
+          $hashHex = (Get-FileHash -Path $setup.FullName -Algorithm SHA512).Hash
+          $hashBytes = New-Object byte[] ($hashHex.Length / 2)
+          for ($i = 0; $i -lt $hashHex.Length; $i += 2) {
+            $hashBytes[$i / 2] = [Convert]::ToByte($hashHex.Substring($i, 2), 16)
+          }
+          $sha512 = [Convert]::ToBase64String($hashBytes)
+          $version = $env:GITHUB_REF_NAME.TrimStart('v')
+          $releaseDate = (Get-Date).ToUniversalTime().ToString('o')
+          $metadata = @"
+version: $version
+files:
+  - url: $($setup.Name)
+    sha512: $sha512
+    size: $($setup.Length)
+path: $($setup.Name)
+sha512: $sha512
+size: $($setup.Length)
+releaseDate: $releaseDate
+"@
+          [System.IO.File]::WriteAllText((Join-Path $PWD 'dist/latest.yml'), $metadata, (New-Object System.Text.UTF8Encoding($false)))
+
       - name: Publish GitHub Release
         shell: bash
         env:
