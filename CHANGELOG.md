@@ -40,3 +40,13 @@ Arka plan video worker’ı, Edilmiş Videolar varsayılan çıktı klasörü ve
 - Orijinal ses akışı korunuyor; AAC, 48 kHz, 160 kbps ses çıkışı ve zaman damgası düzeltmesi eklendi.
 - Video render için `superfast` preset ve otomatik thread kullanımı etkinleştirildi.
 - Ses içermeyen videolar için de uyumlu çıktı akışı korundu.
+
+## v1.4.0 — Public ve ultra sağlam güncelleme sistemi
+
+- GitHub deposu public yapıldı; kurulu Windows uygulaması artık kullanıcı girişi olmadan Release ve latest.yml okuyabiliyor.
+- Eski private-repo bağımlı electron-updater kaldırıldı.
+- GitHub API ve latest.yml arasında yedekli güncelleme kontrolü eklendi.
+- Setup indirmesinde HTTPS, yönlendirme sınırı, boyut limiti, Windows MZ doğrulaması ve SHA-512 checksum kontrolü eklendi.
+- İndirme yarıda kalırsa geçici dosya temizleniyor ve kullanıcı dostu hata gösteriliyor.
+- Güncelleme kurulumu uygulamayı güvenli şekilde kapatıp setup’ı sessiz kurulumla başlatıyor.
+- FFmpeg ve gerekli Windows bileşenleri setup içine dahil edilmeye devam ediyor.

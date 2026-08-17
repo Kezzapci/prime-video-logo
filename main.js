@@ -3,7 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { spawn, fork, execFileSync } = require('child_process');
-const { autoUpdater } = require('electron-updater');
+const https = require('https');
+const { URL } = require('url');
 
 let mainWindow;
 let videoWorker = null;
@@ -13,6 +14,14 @@ const historyPath = path.join(appDataDir, 'history.json');
 const settingsPath = path.join(appDataDir, 'settings.json');
 const logsDir = path.join(appDataDir, 'logs');
 const logPath = path.join(logsDir, 'prime-video-logo.log');
+const updateConfig = {
+  owner: 'Kezzapci',
+  repo: 'prime-video-logo',
+  apiBase: 'https://api.github.com',
+  releaseBase: 'https://github.com/Kezzapci/prime-video-logo/releases'
+};
+let availableUpdate = null;
+let downloadedUpdatePath = null;
 
 function ensureDataFiles() {
   fs.mkdirSync(appDataDir, { recursive: true });
@@ -119,17 +128,168 @@ function repairSystem() {
   return result;
 }
 
+function compareVersions(left, right) {
+  const parse = value => String(value || '0').replace(/^v/i, '').split(/[.-]/).map(part => Number.parseInt(part, 10) || 0);
+  const a = parse(left); const b = parse(right);
+  for (let index = 0; index < 3; index += 1) {
+    if ((a[index] || 0) !== (b[index] || 0)) return (a[index] || 0) > (b[index] || 0) ? 1 : -1;
+  }
+  return 0;
+}
+
+function requestText(target, redirects = 0) {
+  return new Promise((resolve, reject) => {
+    if (redirects > 5) return reject(new Error('Güncelleme yönlendirmesi çok uzun.'));
+    const parsed = new URL(target);
+    if (parsed.protocol !== 'https:') return reject(new Error('Güvenli olmayan güncelleme adresi.'));
+    const request = https.get(parsed, {
+      headers: {
+        'User-Agent': 'PrimeVideoLogo-Updater/1.4',
+        Accept: 'application/vnd.github+json'
+      }
+    }, response => {
+      const status = response.statusCode || 0;
+      if ([301, 302, 303, 307, 308].includes(status) && response.headers.location) {
+        response.resume();
+        return requestText(new URL(response.headers.location, parsed).toString(), redirects + 1).then(resolve, reject);
+      }
+      if (status < 200 || status >= 300) {
+        response.resume();
+        return reject(new Error(`Güncelleme sunucusu HTTP ${status}`));
+      }
+      const chunks = []; let size = 0;
+      response.on('data', chunk => {
+        size += chunk.length;
+        if (size > 4 * 1024 * 1024) { request.destroy(); reject(new Error('Güncelleme bilgisi beklenenden büyük.')); return; }
+        chunks.push(chunk);
+      });
+      response.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+      response.on('error', reject);
+    });
+    request.setTimeout(20000, () => request.destroy(new Error('Güncelleme bağlantısı zaman aşımına uğradı.')));
+    request.on('error', reject);
+  });
+}
+
+function requestJson(target) {
+  return requestText(target).then(text => JSON.parse(text));
+}
+
+function downloadFile(target, destination, onProgress, redirects = 0) {
+  return new Promise((resolve, reject) => {
+    if (redirects > 5) return reject(new Error('Güncelleme indirme yönlendirmesi çok uzun.'));
+    const parsed = new URL(target);
+    if (parsed.protocol !== 'https:') return reject(new Error('Güvenli olmayan indirme adresi.'));
+    const request = https.get(parsed, { headers: { 'User-Agent': 'PrimeVideoLogo-Updater/1.4' } }, response => {
+      const status = response.statusCode || 0;
+      if ([301, 302, 303, 307, 308].includes(status) && response.headers.location) {
+        response.resume();
+        return downloadFile(new URL(response.headers.location, parsed).toString(), destination, onProgress, redirects + 1).then(resolve, reject);
+      }
+      if (status < 200 || status >= 300) {
+        response.resume();
+        return reject(new Error(`Güncelleme indirme sunucusu HTTP ${status}`));
+      }
+      const total = Number(response.headers['content-length'] || 0);
+      let received = 0; let failed = false;
+      const output = fs.createWriteStream(destination);
+      const fail = error => {
+        if (failed) return;
+        failed = true;
+        output.destroy();
+        request.destroy();
+        try { fs.unlinkSync(destination); } catch { /* geçici dosya olmayabilir */ }
+        reject(error);
+      };
+      response.on('data', chunk => {
+        received += chunk.length;
+        if (received > 2 * 1024 * 1024 * 1024) return fail(new Error('Güncelleme paketi güvenli boyut sınırını aşıyor.'));
+        if (typeof onProgress === 'function') onProgress(received, total);
+      });
+      response.on('aborted', () => fail(new Error('Güncelleme indirmesi yarıda kesildi.')));
+      response.on('error', fail);
+      output.on('error', fail);
+      output.on('finish', () => { if (!failed) output.close(() => resolve({ received, total })); });
+      response.pipe(output);
+    });
+    request.setTimeout(120000, () => request.destroy(new Error('Güncelleme indirmesi zaman aşımına uğradı.')));
+    request.on('error', reject);
+  });
+}
+
+function parseLatestYml(text) {
+  const value = key => {
+    const match = new RegExp(`^\\s*${key}:\\s*[\\\"']?([^\\\"'\\r\\n]+)`, 'mi').exec(text);
+    return match ? match[1].trim() : '';
+  };
+  return { version: value('version'), path: value('path'), sha512: value('sha512'), size: Number(value('size')) || 0 };
+}
+
+async function loadLatestRelease() {
+  const repoPath = `${updateConfig.owner}/${updateConfig.repo}`;
+  let release = null;
+  try { release = await requestJson(`${updateConfig.apiBase}/repos/${repoPath}/releases/latest`); } catch (apiError) {
+    logEvent('warn', 'GitHub API okunamadı; latest.yml yedeği deneniyor', { error: String(apiError?.message || apiError) });
+    const yml = parseLatestYml(await requestText(`${updateConfig.releaseBase}/latest/download/latest.yml`));
+    if (!yml.version || !yml.path) throw apiError;
+    return { ...yml, fileName: yml.path, url: `${updateConfig.releaseBase}/latest/download/${encodeURIComponent(yml.path)}` };
+  }
+  const assets = Array.isArray(release.assets) ? release.assets : [];
+  const setupAsset = assets.find(asset => /^PrimeVideoLogo-Setup-.*\\.exe$/i.test(asset.name));
+  const ymlAsset = assets.find(asset => asset.name.toLowerCase() === 'latest.yml');
+  let yml = {};
+  if (ymlAsset?.browser_download_url) {
+    try { yml = parseLatestYml(await requestText(ymlAsset.browser_download_url)); } catch (error) { logEvent('warn', 'latest.yml okunamadı; Release metadata kullanılacak', { error: String(error?.message || error) }); }
+  }
+  const version = String(release.tag_name || yml.version || '').replace(/^v/i, '');
+  const fileName = setupAsset?.name || yml.path;
+  if (!version || !fileName) throw new Error('GitHub Release içinde geçerli Windows setup bulunamadı.');
+  return {
+    version,
+    fileName,
+    url: setupAsset?.browser_download_url || `${updateConfig.releaseBase}/download/v${version}/${encodeURIComponent(fileName)}`,
+    sha512: yml.sha512 || '',
+    size: Number(setupAsset?.size || yml.size || 0)
+  };
+}
+
+async function checkForUpdatesGithub({ silent = false } = {}) {
+  if (!silent) sendUpdateStatus('checking');
+  try {
+    const info = await loadLatestRelease();
+    if (compareVersions(info.version, app.getVersion()) > 0) {
+      availableUpdate = info;
+      sendUpdateStatus('available', { version: info.version, size: info.size, source: 'github' });
+      return { status: 'available', version: info.version, size: info.size };
+    }
+    availableUpdate = null;
+    if (!silent) sendUpdateStatus('not-available', { version: app.getVersion() });
+    return { status: 'not-available', version: app.getVersion() };
+  } catch (error) {
+    logEvent('warn', 'GitHub güncelleme kontrolü başarısız', { error: String(error?.message || error) });
+    if (!silent) sendUpdateStatus('error', { message: friendlyError(error, 'Güncelleme kontrolü başarısız.') });
+    return { status: 'error', message: friendlyError(error, 'Güncelleme kontrolü başarısız.') };
+  }
+}
+
+function hashFileAs(filePath, algorithm = 'sha256', encoding = 'hex') {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash(algorithm);
+    const stream = fs.createReadStream(filePath);
+    stream.on('data', chunk => hash.update(chunk));
+    stream.on('error', reject);
+    stream.on('end', () => resolve(hash.digest(encoding)));
+  });
+}
+
+function assertWindowsInstaller(filePath) {
+  const header = Buffer.alloc(2); const descriptor = fs.openSync(filePath, 'r');
+  try { fs.readSync(descriptor, header, 0, 2, 0); } finally { fs.closeSync(descriptor); }
+  if (header.toString('ascii') !== 'MZ') throw new Error('İndirilen güncelleme geçerli bir Windows paketi değil.');
+}
+
 function setupAutoUpdater() {
-  autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = false;
-  autoUpdater.allowDowngrade = false;
-  autoUpdater.on('checking-for-update', () => sendUpdateStatus('checking'));
-  autoUpdater.on('update-available', info => sendUpdateStatus('available', { version: info.version }));
-  autoUpdater.on('update-not-available', info => sendUpdateStatus('not-available', { version: info.version || app.getVersion() }));
-  autoUpdater.on('download-progress', progress => sendUpdateStatus('downloading', { percent: Math.round(progress.percent), transferred: progress.transferred, total: progress.total }));
-  autoUpdater.on('update-downloaded', info => { updateReady = true; sendUpdateStatus('downloaded', { version: info.version }); });
-  autoUpdater.on('error', error => { logEvent('warn', 'Otomatik güncelleme kontrolü başarısız', { error: String(error?.message || error) }); sendUpdateStatus('error', { message: error?.message || 'Güncelleme kontrolü başarısız.' }); });
-  if (app.isPackaged) setTimeout(() => autoUpdater.checkForUpdates().catch(error => logEvent('warn', 'Başlangıç güncelleme kontrolü başarısız', { error: String(error?.message || error) })), 5000);
+  if (app.isPackaged) setTimeout(() => checkForUpdatesGithub({ silent: true }), 5000);
 }
 
 function createWindow() {
@@ -164,18 +324,56 @@ ipcMain.handle('repair-system', () => repairSystem());
 ipcMain.handle('open-logs', () => shell.openPath(logPath));
 ipcMain.handle('check-for-updates', async () => {
   if (!app.isPackaged) return { status: 'dev', version: app.getVersion() };
-  try { await autoUpdater.checkForUpdates(); return { status: 'checking', version: app.getVersion() }; }
-  catch (error) { const message = friendlyError(error, 'Güncelleme kontrolü başarısız.'); logEvent('warn', 'Manuel güncelleme kontrolü başarısız', { error: String(error?.message || error) }); sendUpdateStatus('error', { message }); return { status: 'error', message }; }
+  return checkForUpdatesGithub();
 });
 ipcMain.handle('download-update', async () => {
   if (!app.isPackaged) return { status: 'dev' };
-  try { await autoUpdater.downloadUpdate(); return { status: 'downloading' }; }
-  catch (error) { const message = friendlyError(error, 'Güncelleme indirilemedi.'); logEvent('warn', 'Güncelleme indirme başarısız', { error: String(error?.message || error) }); sendUpdateStatus('error', { message }); return { status: 'error', message }; }
+  try {
+    if (!availableUpdate) {
+      const checked = await checkForUpdatesGithub();
+      if (checked.status !== 'available') return checked;
+    }
+    const info = availableUpdate;
+    const updateDir = path.join(app.getPath('temp'), 'PrimeVideoLogo', 'updates');
+    fs.mkdirSync(updateDir, { recursive: true });
+    const destination = path.join(updateDir, safeName(info.fileName));
+    try { if (fs.existsSync(destination)) fs.unlinkSync(destination); } catch { /* eski geçici dosya kilitli olabilir */ }
+    sendUpdateStatus('downloading', { percent: 0, total: info.size || 0, transferred: 0 });
+    await downloadFile(info.url, destination, (received, total) => {
+      const effectiveTotal = total || info.size || 0;
+      sendUpdateStatus('downloading', { percent: effectiveTotal ? Math.min(99, Math.round((received / effectiveTotal) * 100)) : 0, total: effectiveTotal, transferred: received });
+    });
+    assertWindowsInstaller(destination);
+    if (info.sha512) {
+      const actual = await hashFileAs(destination, 'sha512', 'base64');
+      if (actual !== info.sha512) throw new Error('Güncelleme checksum doğrulaması başarısız.');
+    }
+    downloadedUpdatePath = destination;
+    updateReady = true;
+    sendUpdateStatus('downloaded', { version: info.version });
+    return { status: 'downloaded', version: info.version };
+  } catch (error) {
+    downloadedUpdatePath = null;
+    const message = friendlyError(error, 'Güncelleme indirilemedi veya doğrulanamadı.');
+    logEvent('warn', 'Güncelleme indirme/doğrulama başarısız', { error: String(error?.message || error) });
+    sendUpdateStatus('error', { message });
+    return { status: 'error', message };
+  }
 });
 ipcMain.handle('install-update', () => {
-  if (!updateReady) return { status: 'not-ready' };
-  setImmediate(() => autoUpdater.quitAndInstall(false, true));
-  return { status: 'installing' };
+  if (!updateReady || !downloadedUpdatePath || !fs.existsSync(downloadedUpdatePath)) return { status: 'not-ready' };
+  if (process.platform !== 'win32') return { status: 'error', message: 'Otomatik kurulum yalnızca Windows paketinde kullanılabilir.' };
+  try {
+    const installer = spawn(downloadedUpdatePath, ['/S'], { detached: true, stdio: 'ignore', windowsHide: true });
+    installer.unref();
+    setTimeout(() => app.quit(), 450);
+    return { status: 'installing' };
+  } catch (error) {
+    const message = friendlyError(error, 'Güncelleme kurulumu başlatılamadı.');
+    logEvent('warn', 'Güncelleme kurulumu başarısız', { error: String(error?.message || error) });
+    sendUpdateStatus('error', { message });
+    return { status: 'error', message };
+  }
 });
 ipcMain.handle('choose-folder', async (_event, kind) => {
   const result = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'], title: kind === 'input' ? 'Video klasörü seç' : 'Çıktı klasörü seç' });
