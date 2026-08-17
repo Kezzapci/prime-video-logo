@@ -1,7 +1,6 @@
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const os = require('os');
 const { spawn } = require('child_process');
 
 let currentProcess = null;
@@ -58,8 +57,7 @@ async function processOne(index, total, video, settings, historyHashes, ffmpegPa
 
   const outputPath = path.join(outputDir, `${safeName(path.parse(video.name).name)}_logo_9x16.mp4`);
   const filter = buildFilter(settings, 'primary');
-  const cpuCount = Math.max(1, Math.min(4, (os.cpus() || []).length - 1));
-  const args = ['-y', '-hide_banner', '-i', video.path, '-i', settings.logoPath, '-filter_complex', filter, '-map', '[out]', '-map', '0:a?', '-c:v', 'libx264', '-preset', 'veryfast', '-threads', String(cpuCount), '-crf', '20', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', outputPath];
+  const args = ['-y', '-hide_banner', '-i', video.path, '-i', settings.logoPath, '-filter_complex', filter, '-map', '[out]', '-map', '0:a:0?', '-map_metadata', '0', '-c:v', 'libx264', '-preset', 'superfast', '-threads', '0', '-crf', '21', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2', '-af', 'aresample=async=1:first_pts=0', '-shortest', '-max_muxing_queue_size', '2048', '-movflags', '+faststart', outputPath];
   const job = { name: video.name, status: 'processing', progress: 0, message: 'Hazırlanıyor' };
   sendProgress(index, total, job);
 

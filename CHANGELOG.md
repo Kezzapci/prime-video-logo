@@ -31,3 +31,12 @@ Logo ölçekleme ve 9:16 kadraj düzeltmeleri.
 ## v1.1.0
 
 Arka plan video worker’ı, Edilmiş Videolar varsayılan çıktı klasörü ve durdurma akışı.
+
+## v1.3.0
+
+- 1000+ videoda arayüz kasmasını azaltan sanal liste ve lazy thumbnail kuyruğu eklendi.
+- Ön izleme kareleri en fazla iki eşzamanlı FFmpeg işiyle kontrollü üretiliyor.
+- Logo ön izlemede serbestçe sürüklenebiliyor; konum ve boyut ayarları render ile eşleştirildi.
+- Orijinal ses akışı korunuyor; AAC, 48 kHz, 160 kbps ses çıkışı ve zaman damgası düzeltmesi eklendi.
+- Video render için `superfast` preset ve otomatik thread kullanımı etkinleştirildi.
+- Ses içermeyen videolar için de uyumlu çıktı akışı korundu.
