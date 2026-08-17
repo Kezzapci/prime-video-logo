@@ -6,3 +6,7 @@ vendor/ffmpeg/ffmpeg.exe
 /tmp/
 .DS_Store
 *.log
+
+# Local diagnostics and source bundles
+diagnosis/
+PrimeVideoLogo-source-*.zip

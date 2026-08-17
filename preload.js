@@ -17,5 +17,10 @@ contextBridge.exposeInMainWorld('primeAPI', {
   processVideos: payload => ipcRenderer.invoke('process-videos', payload),
   stopProcessing: () => ipcRenderer.invoke('stop-processing'),
   onProgress: callback => ipcRenderer.on('process-progress', (_event, data) => callback(data)),
-  onUpdateStatus: callback => ipcRenderer.on('update-status', (_event, data) => callback(data))
+  onUpdateStatus: callback => ipcRenderer.on('update-status', (_event, data) => callback(data)),
+  getHealth: () => ipcRenderer.invoke('get-health'),
+  repairSystem: () => ipcRenderer.invoke('repair-system'),
+  openLogs: () => ipcRenderer.invoke('open-logs'),
+  reportError: payload => ipcRenderer.send('renderer-error', payload),
+  onHealthStatus: callback => ipcRenderer.on('health-status', (_event, data) => callback(data))
 });

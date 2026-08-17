@@ -1,6 +1,7 @@
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
+const os = require('os');
 const { spawn } = require('child_process');
 
 let currentProcess = null;
@@ -27,6 +28,24 @@ function safeName(name) {
 function sendProgress(index, total, data) {
   send({ type: 'progress', index, total, ...data });
 }
+function friendlyWorkerError(error) {
+  const raw = String(error?.message || error || 'Video işlenemedi.');
+  if (/no such file|not found|cannot find/i.test(raw)) return 'Video motoru bulunamadı.';
+  if (/invalid data|codec|format/i.test(raw)) return 'Video formatı desteklenmiyor veya dosya bozuk.';
+  if (/permission|denied/i.test(raw)) return 'Dosya erişim izni reddedildi.';
+  return raw.length > 160 ? `${raw.slice(0, 157)}…` : raw;
+}
+function buildFilter(settings, mode = 'primary') {
+  const logoW = Math.max(0.05, Math.min(0.8, Number(settings.logoWidth) || 0.22));
+  const x = Math.max(0, Math.min(1 - logoW, Number(settings.logoX) || 0.74));
+  const y = Math.max(0, Math.min(0.8, Number(settings.logoY) || 0.05));
+  const opacity = Math.max(0.05, Math.min(1, Number(settings.opacity) || 1));
+  const logoWidthPx = Math.max(2, Math.round(720 * logoW / 2) * 2);
+  const logoXPx = Math.max(0, Math.round(720 * x));
+  const logoYPx = Math.max(0, Math.round(1280 * y));
+  if (mode === 'fallback') return `[0:v]scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2,setsar=1[base];[1:v]format=rgba,colorchannelmixer=aa=${opacity},scale=w=${logoWidthPx}:h=-1[logo];[base][logo]overlay=x=${logoXPx}:y=${logoYPx}:repeatlast=1[out]`;
+  return `[0:v]scale=iw*max(720/iw\\,1280/ih):ih*max(720/iw\\,1280/ih),crop=720:1280:(in_w-720)/2:(in_h-1280)/2,setsar=1[base];[1:v]format=rgba,colorchannelmixer=aa=${opacity},scale=w=${logoWidthPx}:h=-1[logo];[base][logo]overlay=x=${logoXPx}:y=${logoYPx}:eval=frame:repeatlast=1[out]`;
+}
 
 async function processOne(index, total, video, settings, historyHashes, ffmpegPath, outputDir) {
   if (stopRequested) return { stopped: true };
@@ -38,20 +57,15 @@ async function processOne(index, total, video, settings, historyHashes, ffmpegPa
   }
 
   const outputPath = path.join(outputDir, `${safeName(path.parse(video.name).name)}_logo_9x16.mp4`);
-  const logoW = Math.max(0.05, Math.min(0.8, Number(settings.logoWidth) || 0.22));
-  const x = Math.max(0, Math.min(1 - logoW, Number(settings.logoX) || 0.74));
-  const y = Math.max(0, Math.min(0.8, Number(settings.logoY) || 0.05));
-  const opacity = Math.max(0.05, Math.min(1, Number(settings.opacity) || 1));
-  const logoWidthPx = Math.max(2, Math.round(720 * logoW / 2) * 2);
-  const logoXPx = Math.max(0, Math.round(720 * x));
-  const logoYPx = Math.max(0, Math.round(1280 * y));
-  const filter = `[0:v]scale=iw*max(720/iw\\,1280/ih):ih*max(720/iw\\,1280/ih),crop=720:1280:(in_w-720)/2:(in_h-1280)/2,setsar=1[base];[1:v]format=rgba,colorchannelmixer=aa=${opacity},scale=w=${logoWidthPx}:h=-1[logo];[base][logo]overlay=x=${logoXPx}:y=${logoYPx}:eval=frame[out]`;
-  const args = ['-y', '-hide_banner', '-i', video.path, '-i', settings.logoPath, '-filter_complex', filter, '-map', '[out]', '-map', '0:a?', '-c:v', 'libx264', '-preset', 'veryfast', '-threads', '0', '-crf', '20', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', outputPath];
+  const filter = buildFilter(settings, 'primary');
+  const cpuCount = Math.max(1, Math.min(4, (os.cpus() || []).length - 1));
+  const args = ['-y', '-hide_banner', '-i', video.path, '-i', settings.logoPath, '-filter_complex', filter, '-map', '[out]', '-map', '0:a?', '-c:v', 'libx264', '-preset', 'veryfast', '-threads', String(cpuCount), '-crf', '20', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', outputPath];
   const job = { name: video.name, status: 'processing', progress: 0, message: 'Hazırlanıyor' };
   sendProgress(index, total, job);
 
-  await new Promise((resolve, reject) => {
-    currentProcess = spawn(ffmpegPath, args, { windowsHide: true });
+  async function runFfmpeg(currentArgs, attempt = 1) {
+    await new Promise((resolve, reject) => {
+    currentProcess = spawn(ffmpegPath, currentArgs, { windowsHide: true });
     let duration = 0;
     let stderrTail = '';
     currentProcess.stderr.on('data', chunk => {
@@ -72,7 +86,21 @@ async function processOne(index, total, video, settings, historyHashes, ffmpegPa
       if (code === 0 && fs.existsSync(outputPath)) return resolve();
       reject(new Error(stderrTail.slice(-700) || `FFmpeg hata kodu: ${code}`));
     });
-  });
+    });
+  }
+  try {
+    await runFfmpeg(args);
+  } catch (primaryError) {
+    if (fs.existsSync(outputPath)) try { fs.unlinkSync(outputPath); } catch { /* yarım çıktı temizlenebilir */ }
+    sendProgress(index, total, { name: video.name, status: 'processing', progress: 0, message: 'Akıllı kurtarma filtresi deneniyor…' });
+    try {
+      const fallbackArgs = args.slice();
+      fallbackArgs[fallbackArgs.indexOf(filter)] = buildFilter(settings, 'fallback');
+      await runFfmpeg(fallbackArgs, 2);
+    } catch (fallbackError) {
+      throw new Error(friendlyWorkerError(fallbackError || primaryError));
+    }
+  }
 
   if (stopRequested) return { stopped: true };
   const record = { hash, name: video.name, outputPath, processedAt: new Date().toISOString() };
@@ -95,8 +123,9 @@ async function processBatch(payload) {
       results.push(result);
       if (result?.stopped) break;
     } catch (error) {
-      sendProgress(index, videos.length, { name: videos[index].name, status: 'error', progress: 0, message: error.message });
-      results.push({ name: videos[index].name, status: 'error', message: error.message });
+      const message = friendlyWorkerError(error);
+      sendProgress(index, videos.length, { name: videos[index].name, status: 'error', progress: 0, message });
+      results.push({ name: videos[index].name, status: 'error', message });
     }
   }
   send({ type: stopRequested ? 'stopped' : 'finished', results });

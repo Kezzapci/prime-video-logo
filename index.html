@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
@@ -8,61 +8,73 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
   <div class="app-shell">
     <header class="topbar">
       <div class="brand-lockup">
         <div class="brand-mark"><span>✦</span></div>
-        <div><div class="brand-name"><strong>PRIME</strong> VIDEO <em>LOGO</em></div><div class="brand-subtitle">SERİ VİDEO STÜDYOSU</div></div>
+        <div><div class="brand-name"><strong>PRIME</strong> VIDEO <em>LOGO</em></div><div class="brand-subtitle">SERİ VİDEO STÜDYOSU · UMUT SARIYER</div></div>
       </div>
-      <div class="top-status"><span class="status-dot"></span><span id="topStatus">Hazır</span></div>
-      <div class="window-controls"><button>—</button><button>□</button><button>×</button></div>
+      <div class="topbar-center"><span class="live-pulse"></span><span>İş akışı hazır</span><span class="topbar-divider"></span><span id="topStatus">Hazır</span></div>
+      <div class="topbar-right"><div class="top-status"><span class="status-dot"></span><span id="readyChip">Sistem hazır</span></div><div class="window-controls"><button aria-label="Simge durumuna küçült">—</button><button aria-label="Pencereyi büyüt">□</button><button aria-label="Kapat">×</button></div></div>
     </header>
 
-    <div class="update-banner hidden" id="updateBanner"><div><strong id="updateTitle">Yeni güncelleme bulundu</strong><span id="updateMessage">Yeni sürüm hazır.</span></div><div class="update-actions"><button class="button button-gold" id="updateActionBtn">İndir</button><button class="update-close" id="closeUpdateBanner">×</button></div></div>
+    <div class="update-banner hidden" id="updateBanner"><div class="update-icon">↗</div><div class="update-copy"><strong id="updateTitle">Yeni güncelleme bulundu</strong><span id="updateMessage">Yeni sürüm hazır.</span></div><div class="update-actions"><button class="button button-gold" id="updateActionBtn">İndir</button><button class="update-close" id="closeUpdateBanner" aria-label="Kapat">×</button></div></div>
+
     <div class="workspace">
       <aside class="sidebar">
+        <div class="sidebar-label">WORKSPACE</div>
         <nav>
-          <button class="nav-item active" data-page="center"><span class="nav-icon">▦</span><span>İşlem Merkezi</span></button>
-          <button class="nav-item" data-page="history"><span class="nav-icon">◔</span><span>Geçmiş</span></button>
-          <button class="nav-item" data-page="settings"><span class="nav-icon">⚙</span><span>Ayarlar</span></button>
+          <button class="nav-item active" data-page="center"><span class="nav-icon">▦</span><span>İşlem Merkezi</span><b>01</b></button>
+          <button class="nav-item" data-page="history"><span class="nav-icon">◔</span><span>Geçmiş</span><b>02</b></button>
+          <button class="nav-item" data-page="settings"><span class="nav-icon">⚙</span><span>Ayarlar</span><b>03</b></button>
         </nav>
-        <div class="sidebar-tip"><span class="tip-icon">✦</span><div><strong>Hızlı çalışma</strong><p>Logo konumunu ön izlemede sürükleyerek ayarla.</p></div></div>
+        <div class="sidebar-tip"><span class="tip-icon">✦</span><div><strong>Akıllı iş akışı</strong><p>Logo konumunu ön izlemede sürükle. Sistem ayarını kaydeder.</p></div></div>
+        <div class="sidebar-footer"><span class="shield">✓</span><span>Yerel ve güvenli</span></div>
       </aside>
 
       <main class="main-content">
         <section id="centerPage" class="page active-page">
-          <div class="page-heading"><div><h1>İşlem Merkezi</h1><p>Videolarını seç, logonu yerleştir ve seri işlemi başlat.</p></div><div class="heading-chip"><span class="status-dot"></span><span id="readyChip">Sistem hazır</span></div></div>
+          <div class="page-heading">
+            <div><div class="eyebrow">PRIME WORKSPACE <span></span></div><h1>İşlem Merkezi</h1><p>Videolarını seç, logonu kadraja yerleştir ve tek akışta üret.</p></div>
+            <div class="heading-chip"><span class="status-dot"></span><span id="headingStatus">Sistem hazır</span></div>
+          </div>
           <div class="dashboard-grid">
-            <section class="panel source-panel">
-              <div class="panel-heading"><div class="panel-icon blue">▱</div><div><h2>Video Klasörü</h2><p>Seri işlenecek videoları seç</p></div></div>
-              <div class="folder-row"><input id="inputPath" readonly placeholder="Video klasörünü seç..." /><button class="button button-blue" id="chooseInput">Klasör Seç</button></div>
+            <section class="panel source-panel reveal-card">
+              <div class="panel-heading"><div class="panel-icon blue">▱</div><div><h2>Video Klasörü</h2><p>Seri işlenecek videoları seç</p></div><span class="step-tag">01</span></div>
+              <div class="folder-row"><input id="inputPath" readonly placeholder="Video klasörünü seç..." /><button class="button button-blue" id="chooseInput">Klasör Seç <span>→</span></button></div>
               <div class="count-row"><span class="count-badge" id="videoCount">0 video</span><span class="muted" id="scanText">Klasör bekleniyor</span></div>
-              <div class="video-list" id="videoList"><div class="empty-state"><span>◌</span><strong>Henüz video seçilmedi</strong><small>MP4, MOV, MKV, AVI veya WEBM</small></div></div>
+              <div class="video-list" id="videoList"><div class="empty-state"><span class="empty-orbit">◌</span><strong>Henüz video seçilmedi</strong><small>MP4, MOV, MKV, AVI veya WEBM</small></div></div>
             </section>
 
-            <section class="panel preview-panel">
-              <div class="panel-heading"><div class="panel-icon blue">◉</div><div><h2>Ön İzleme</h2><p>Logoyu sürükle, boyutunu ayarla</p></div><button class="icon-button" id="chooseLogo" title="Logo seç">＋</button></div>
-              <div class="preview-stage-wrap"><div class="preview-stage" id="previewStage"><img id="previewImage" alt="Video ön izlemesi" /><div class="preview-placeholder" id="previewPlaceholder"><span>▶</span><small>İlk videoyu seçince ön izleme burada görünür</small></div><img id="logoOverlay" class="logo-overlay" alt="Logo" draggable="false" /><div class="safe-frame"></div></div><div class="drag-hint">↔ Logoyu sürükle · Köşeden boyutlandır</div></div>
+            <section class="panel preview-panel reveal-card">
+              <div class="panel-heading"><div class="panel-icon blue">◉</div><div><h2>Ön İzleme</h2><p>Logo konumunu canlı olarak ayarla</p></div><span class="step-tag">02</span><button class="icon-button" id="chooseLogo" title="Logo seç">＋</button></div>
+              <div class="preview-stage-wrap"><div class="preview-stage" id="previewStage"><img id="previewImage" alt="Video ön izlemesi" /><div class="preview-placeholder" id="previewPlaceholder"><span>▶</span><small>İlk videoyu seçince ön izleme burada görünür</small></div><img id="logoOverlay" class="logo-overlay" alt="Logo" draggable="false" /><div class="safe-frame"></div><div class="corner-mark top-left"></div><div class="corner-mark top-right"></div><div class="corner-mark bottom-left"></div><div class="corner-mark bottom-right"></div></div><div class="drag-hint"><span>↔</span> Logoyu sürükle <i></i> Konum kaydedilir</div></div>
               <div class="quick-controls"><button class="preset active" data-pos="top-right">Sağ üst</button><button class="preset" data-pos="top-left">Sol üst</button><button class="preset" data-pos="bottom-right">Sağ alt</button><button class="preset" data-pos="bottom-left">Sol alt</button></div>
               <div class="slider-control"><label>Logo boyutu <span id="sizeValue">22%</span></label><input id="sizeSlider" type="range" min="8" max="45" value="22" /></div>
               <div class="slider-control"><label>Opaklık <span id="opacityValue">100%</span></label><input id="opacitySlider" type="range" min="10" max="100" value="100" /></div>
-              <div class="preview-tags"><span>▯ 9:16 çıktı</span><span>✦ Sürükle-bırak aktif</span></div>
+              <div class="preview-tags"><span><b>▯</b> 9:16 çıktı</span><span><b>✦</b> Sürükle-bırak aktif</span></div>
             </section>
 
-            <section class="panel queue-panel">
-              <div class="panel-heading"><div class="panel-icon gold">☷</div><div><h2>İşlem Kuyruğu</h2><p>Seri işlem durumu</p></div><span class="queue-count" id="queueCount">0</span></div>
-              <div class="queue-list" id="queueList"><div class="empty-state compact"><span>☷</span><strong>Kuyruk boş</strong><small>Video klasörü seçildiğinde burada görünür.</small></div></div>
+            <section class="panel queue-panel reveal-card">
+              <div class="panel-heading"><div class="panel-icon gold">☷</div><div><h2>İşlem Kuyruğu</h2><p>Seri işlem durumu</p></div><span class="step-tag">03</span><span class="queue-count" id="queueCount">0</span></div>
+              <div class="queue-list" id="queueList"><div class="empty-state compact"><span class="empty-orbit">☷</span><strong>Kuyruk boş</strong><small>Video klasörü seçildiğinde burada görünür.</small></div></div>
               <div class="queue-actions"><button class="button button-gold" id="startBtn"><span>▶</span> SERİ İŞLEMİ BAŞLAT</button><button class="button button-dark" id="stopBtn" disabled><span>■</span> Durdur</button></div>
               <div class="skip-note"><span>ⓘ</span><span>Aynı videolar otomatik atlanır.</span></div>
             </section>
           </div>
+          <div class="bottom-insight"><div class="insight-icon">✦</div><div><strong>Akıllı koruma açık</strong><span>İşlem geçmişi SHA-256 parmak iziyle tutulur; aynı dosya ikinci kez üretilmez.</span></div><span class="insight-status">AKTİF</span></div>
+          <div class="rights-banner"><span class="rights-line"></span><div><small>BRAND OWNERSHIP</small><strong>TÜM HAKLARI <b>UMUT SARIYER’E</b> AİTTİR</strong></div><span class="rights-line"></span></div>
         </section>
 
-        <section id="historyPage" class="page"><div class="page-heading"><div><h1>İşlem Geçmişi</h1><p>Daha önce işlenen videolar burada tutulur.</p></div><button class="button button-dark" id="clearHistory">Geçmişi Temizle</button></div><section class="panel history-panel"><div class="history-table-head"><span>Video</span><span>İşlenme tarihi</span><span>Çıktı</span></div><div id="historyList" class="history-list"></div></section></section>
-        <section id="settingsPage" class="page"><div class="page-heading"><div><h1>Ayarlar</h1><p>Çıktı ve logo tercihlerini yönet.</p></div></div><section class="panel settings-panel"><div class="setting-row"><div><h3>Logo dosyası</h3><p id="logoSettingPath">Varsayılan logo</p></div><button class="button button-blue" id="chooseLogoSettings">Logo Seç</button></div><div class="setting-row"><div><h3>Çıktı klasörü</h3><p id="outputSettingPath">Masaüstü\Edilmiş Videolar</p></div><button class="button button-blue" id="chooseOutput">Klasör Seç</button></div><div class="setting-row"><div><h3>Video kadrajı</h3><p>İçerik 9:16 dikey tuvale ortalanarak yerleştirilir.</p></div><span class="setting-badge">9:16</span></div><div class="setting-row update-row"><div><h3>GitHub otomatik güncellemeleri</h3><p id="versionText">Sürüm bilgisi yükleniyor...</p></div><div class="update-setting-actions"><button class="button button-blue" id="checkUpdateBtn">Kontrol Et</button><button class="button button-dark" id="openReleasePage">Release Sayfası</button></div></div></section></section>
+        <section id="historyPage" class="page"><div class="page-heading"><div><div class="eyebrow">ACTIVITY LOG <span></span></div><h1>İşlem Geçmişi</h1><p>Daha önce işlenen videolar ve çıktı kayıtları.</p></div><button class="button button-dark" id="clearHistory">Geçmişi Temizle</button></div><section class="panel history-panel"><div class="history-table-head"><span>Video</span><span>İşlenme tarihi</span><span>Çıktı</span></div><div id="historyList" class="history-list"></div></section></section>
+
+        <section id="settingsPage" class="page"><div class="page-heading"><div><div class="eyebrow">CONTROL ROOM <span></span></div><h1>Ayarlar</h1><p>Çıktı, logo ve otomatik onarım tercihlerini yönet.</p></div></div><section class="panel settings-panel"><div class="setting-row"><div><h3>Logo dosyası</h3><p id="logoSettingPath">Varsayılan logo</p></div><button class="button button-blue" id="chooseLogoSettings">Logo Seç <span>→</span></button></div><div class="setting-row"><div><h3>Çıktı klasörü</h3><p id="outputSettingPath">Masaüstü\Edilmiş Videolar</p></div><button class="button button-blue" id="chooseOutput">Klasör Seç <span>→</span></button></div><div class="setting-row"><div><h3>Video kadrajı</h3><p>İçerik 9:16 dikey tuvale ortalanarak yerleştirilir.</p></div><span class="setting-badge">9:16</span></div><div class="setting-row update-row"><div><h3>GitHub otomatik güncellemeleri</h3><p id="versionText">Sürüm bilgisi yükleniyor...</p></div><div class="update-setting-actions"><button class="button button-blue" id="checkUpdateBtn">Kontrol Et</button><button class="button button-dark" id="openReleasePage">Release Sayfası</button></div></div></section>
+          <section class="health-panel panel"><div class="health-header"><div><div class="eyebrow">SELF HEALING <span></span></div><h2>Otomatik Sistem Onarımı</h2><p id="healthSummary">Uygulama bileşenleri kontrol ediliyor...</p></div><div class="health-orb" id="healthOrb"><span>✓</span></div></div><div class="health-grid" id="healthGrid"></div><div class="health-actions"><button class="button button-gold" id="repairBtn"><span>✦</span> SİSTEMİ TARA VE ONAR</button><button class="button button-dark" id="openLogsBtn">Teknik kayıtları aç</button></div></section>
+        </section>
       </main>
     </div>
-    <footer class="statusbar"><div>▱ <span>Çıktı klasörü:</span> <strong id="outputPathText">Masaüstü\Edilmiş Videolar</strong></div><div><span class="status-dot"></span><strong id="footerStatus">Kayıt aktif</strong></div></footer>
+    <footer class="statusbar"><div><span class="footer-dot"></span><span>Çıktı:</span> <strong id="outputPathText">Masaüstü\Edilmiş Videolar</strong></div><div><span class="status-dot"></span><strong id="footerStatus">Kayıt aktif</strong></div></footer>
   </div>
   <script src="renderer.js"></script>
 </body>
