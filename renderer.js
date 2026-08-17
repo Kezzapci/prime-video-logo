@@ -31,8 +31,8 @@ function setStatus(message, busy = false) {
 function applySettingsToUI() {
   const s = state.settings;
   $('inputPath').value = state.inputPath || '';
-  $('outputPathText').textContent = shortPath(s.outputPath || 'Masaüstü\\PrimeVideoLogo');
-  $('outputSettingPath').textContent = s.outputPath || 'Masaüstü\\PrimeVideoLogo';
+  $('outputPathText').textContent = shortPath(s.outputPath || 'Masaüstü\\Edilmiş Videolar');
+  $('outputSettingPath').textContent = s.outputPath || 'Masaüstü\\Edilmiş Videolar';
   $('logoSettingPath').textContent = s.logoPath || 'Varsayılan logo';
   $('sizeSlider').value = Math.round((Number(s.logoWidth) || .22) * 100);
   $('opacitySlider').value = Math.round((Number(s.opacity) || 1) * 100);
@@ -95,6 +95,20 @@ function updateQueue(data) {
   stateEl.textContent = data.message || 'İşleniyor'; stateEl.className = `queue-state state-${data.status === 'done' ? 'done' : data.status === 'skipped' ? 'skipped' : data.status === 'processing' ? 'processing' : 'wait'}`;
   if (data.status === 'done') bar.style.background = '#58c835';
   if (data.status === 'skipped') { bar.style.background = '#738795'; stateEl.textContent = 'Atlandı · Daha önce işlendi'; }
+  if (data.status === 'error') { bar.style.background = '#e05656'; stateEl.textContent = `Hata: ${data.message || 'İşlenemedi'}`; }
+}
+
+function updateBanner(title, message, action, actionText) {
+  $('updateBanner').classList.remove('hidden'); $('updateTitle').textContent = title; $('updateMessage').textContent = message;
+  const button = $('updateActionBtn'); button.dataset.action = action || ''; button.textContent = actionText || 'Kapat'; button.disabled = !action;
+}
+function handleUpdateStatus(data) {
+  if (data.type === 'checking') { $('checkUpdateBtn').disabled = true; updateBanner('Güncellemeler kontrol ediliyor', 'GitHub Releases bağlantısı kontrol ediliyor…', '', 'Kontrol ediliyor'); }
+  if (data.type === 'available') { $('checkUpdateBtn').disabled = false; updateBanner('Yeni sürüm bulundu', `v${data.version} hazır. İndirmek ister misin?`, 'download', 'Güncellemeyi İndir'); showToast(`Yeni sürüm v${data.version} bulundu`); }
+  if (data.type === 'downloading') { updateBanner('Güncelleme indiriliyor', `%${data.percent || 0} tamamlandı. İşlem devam edebilir.`, '', `%${data.percent || 0}`); }
+  if (data.type === 'downloaded') { updateBanner('Güncelleme hazır', `v${data.version} kurulduktan sonra uygulama yeniden başlayacak.`, 'install', 'Yeniden Başlat ve Güncelle'); }
+  if (data.type === 'not-available') { $('checkUpdateBtn').disabled = false; $('updateBanner').classList.add('hidden'); showToast('Uygulama güncel'); }
+  if (data.type === 'error') { $('checkUpdateBtn').disabled = false; $('updateBanner').classList.add('hidden'); showToast(`Güncelleme kontrolü başarısız: ${data.message || 'Bilinmeyen hata'}`); }
 }
 async function startProcessing() {
   if (state.processing) return;
@@ -127,7 +141,7 @@ function setupDrag() {
   logo.addEventListener('pointerup', end); logo.addEventListener('pointercancel', end);
 }
 
-$('chooseInput').addEventListener('click', chooseInput); $('chooseLogo').addEventListener('click', chooseLogo); $('chooseLogoSettings').addEventListener('click', chooseLogo); $('chooseOutput').addEventListener('click', chooseOutput); $('startBtn').addEventListener('click', startProcessing); $('stopBtn').addEventListener('click', () => showToast('Durdurma bir sonraki güvenli noktada uygulanacak'));
+$('chooseInput').addEventListener('click', chooseInput); $('chooseLogo').addEventListener('click', chooseLogo); $('chooseLogoSettings').addEventListener('click', chooseLogo); $('chooseOutput').addEventListener('click', chooseOutput); $('startBtn').addEventListener('click', startProcessing); $('stopBtn').addEventListener('click', async () => { await window.primeAPI.stopProcessing(); showToast('İşlem durduruluyor…'); });
 $('sizeSlider').addEventListener('input', e => { state.settings.logoWidth = Number(e.target.value) / 100; $('sizeValue').textContent = `${e.target.value}%`; positionLogo(); });
 $('sizeSlider').addEventListener('change', () => window.primeAPI.saveSettings(state.settings));
 $('opacitySlider').addEventListener('input', e => { state.settings.opacity = Number(e.target.value) / 100; $('opacityValue').textContent = `${e.target.value}%`; positionLogo(); });
@@ -136,10 +150,14 @@ document.querySelectorAll('.preset').forEach(btn => btn.addEventListener('click'
 document.querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('click', () => setPage(btn.dataset.page)));
 $('clearHistory').addEventListener('click', async () => { state.history = await window.primeAPI.clearHistory(); renderHistory(); showToast('İşlem geçmişi temizlendi'); });
 $('openReleasePage').addEventListener('click', async () => { await window.primeAPI.openReleasePage(); showToast('GitHub Releases sayfası açıldı'); });
+$('checkUpdateBtn').addEventListener('click', async () => { $('checkUpdateBtn').disabled = true; const result = await window.primeAPI.checkForUpdates(); if (result?.status === 'dev') { $('checkUpdateBtn').disabled = false; showToast('Geliştirme sürümünde otomatik kontrol yalnızca kurulu EXE ile çalışır'); } });
+$('updateActionBtn').addEventListener('click', async () => { const action = $('updateActionBtn').dataset.action; if (action === 'download') await window.primeAPI.downloadUpdate(); if (action === 'install') await window.primeAPI.installUpdate(); });
+$('closeUpdateBanner').addEventListener('click', () => $('updateBanner').classList.add('hidden'));
 window.primeAPI.onProgress(updateQueue);
+window.primeAPI.onUpdateStatus(handleUpdateStatus);
 
 (async () => {
   const initial = await window.primeAPI.getInitialState(); state.settings = initial.settings || {}; state.history = initial.history || [];
   applySettingsToUI(); renderHistory(); setupDrag();
-  const version = await window.primeAPI.getAppVersion(); $('versionText').textContent = `Mevcut sürüm: v${version} · Yeni setup sürümleri GitHub Releases üzerinden yayımlanır.`;
+  const version = initial.version || await window.primeAPI.getAppVersion(); $('versionText').textContent = `Mevcut sürüm: v${version} · Yeni sürümler otomatik kontrol edilir.`;
 })();

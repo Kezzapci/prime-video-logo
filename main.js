@@ -2,9 +2,12 @@ const { app, BrowserWindow, dialog, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const { spawn } = require('child_process');
+const { spawn, fork } = require('child_process');
+const { autoUpdater } = require('electron-updater');
 
 let mainWindow;
+let videoWorker = null;
+let updateReady = false;
 const appDataDir = path.join(app.getPath('userData'), 'data');
 const historyPath = path.join(appDataDir, 'history.json');
 const settingsPath = path.join(appDataDir, 'settings.json');
@@ -15,7 +18,7 @@ function ensureDataFiles() {
   if (!fs.existsSync(historyPath)) fs.writeFileSync(historyPath, JSON.stringify([], null, 2));
   if (!fs.existsSync(settingsPath)) fs.writeFileSync(settingsPath, JSON.stringify({
     logoPath: defaultLogoPath,
-    outputPath: path.join(app.getPath('desktop'), 'PrimeVideoLogo'),
+    outputPath: path.join(app.getPath('desktop'), 'Edilmiş Videolar'),
     logoX: 0.74,
     logoY: 0.05,
     logoWidth: 0.22,
@@ -23,6 +26,11 @@ function ensureDataFiles() {
     fitMode: 'cover',
     margin: 0.04
   }, null, 2));
+  else {
+    const saved = getSettings();
+    const oldDefault = path.join(app.getPath('desktop'), 'PrimeVideoLogo');
+    if (saved.outputPath === oldDefault) { saved.outputPath = path.join(app.getPath('desktop'), 'Edilmiş Videolar'); writeJson(settingsPath, saved); }
+  }
 }
 
 function readJson(file, fallback) {
@@ -48,6 +56,23 @@ function hashFile(filePath) {
 function safeName(name) { return name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_'); }
 function isVideo(file) { return /\.(mp4|mov|mkv|avi|webm|m4v)$/i.test(file); }
 
+function sendUpdateStatus(type, data = {}) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update-status', { type, ...data });
+}
+
+function setupAutoUpdater() {
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.allowDowngrade = false;
+  autoUpdater.on('checking-for-update', () => sendUpdateStatus('checking'));
+  autoUpdater.on('update-available', info => sendUpdateStatus('available', { version: info.version }));
+  autoUpdater.on('update-not-available', info => sendUpdateStatus('not-available', { version: info.version || app.getVersion() }));
+  autoUpdater.on('download-progress', progress => sendUpdateStatus('downloading', { percent: Math.round(progress.percent), transferred: progress.transferred, total: progress.total }));
+  autoUpdater.on('update-downloaded', info => { updateReady = true; sendUpdateStatus('downloaded', { version: info.version }); });
+  autoUpdater.on('error', error => sendUpdateStatus('error', { message: error?.message || 'Güncelleme kontrolü başarısız.' }));
+  if (app.isPackaged) setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 5000);
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1480,
@@ -64,11 +89,28 @@ function createWindow() {
 app.whenReady().then(() => {
   ensureDataFiles();
   createWindow();
+  setupAutoUpdater();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
+app.on('before-quit', () => { if (videoWorker) { videoWorker.kill(); videoWorker = null; } });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
-ipcMain.handle('get-initial-state', () => ({ settings: getSettings(), history: getHistory() }));
+ipcMain.handle('get-initial-state', () => ({ settings: getSettings(), history: getHistory(), version: app.getVersion() }));
+ipcMain.handle('check-for-updates', async () => {
+  if (!app.isPackaged) return { status: 'dev', version: app.getVersion() };
+  try { await autoUpdater.checkForUpdates(); return { status: 'checking', version: app.getVersion() }; }
+  catch (error) { sendUpdateStatus('error', { message: error?.message || 'Güncelleme kontrolü başarısız.' }); return { status: 'error', message: error?.message || 'Güncelleme kontrolü başarısız.' }; }
+});
+ipcMain.handle('download-update', async () => {
+  if (!app.isPackaged) return { status: 'dev' };
+  try { await autoUpdater.downloadUpdate(); return { status: 'downloading' }; }
+  catch (error) { sendUpdateStatus('error', { message: error?.message || 'Güncelleme indirilemedi.' }); return { status: 'error', message: error?.message || 'Güncelleme indirilemedi.' }; }
+});
+ipcMain.handle('install-update', () => {
+  if (!updateReady) return { status: 'not-ready' };
+  setImmediate(() => autoUpdater.quitAndInstall(false, true));
+  return { status: 'installing' };
+});
 ipcMain.handle('choose-folder', async (_event, kind) => {
   const result = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'], title: kind === 'input' ? 'Video klasörü seç' : 'Çıktı klasörü seç' });
   return result.canceled ? null : result.filePaths[0];
@@ -106,61 +148,29 @@ ipcMain.handle('preview-frame', async (_event, videoPath) => {
   });
 });
 
+ipcMain.handle('stop-processing', () => {
+  if (videoWorker) videoWorker.send({ type: 'stop' });
+  return true;
+});
 ipcMain.handle('process-videos', async (event, payload) => {
   const { videos, settings } = payload;
-  const outputDir = settings.outputPath;
-  fs.mkdirSync(outputDir, { recursive: true });
-  const history = getHistory();
-  const historyMap = new Map(history.map(item => [item.hash, item]));
-  const results = [];
+  const outputDir = settings.outputPath || path.join(app.getPath('desktop'), 'Edilmiş Videolar');
   const logoPath = settings.logoPath;
   if (!logoPath || !fs.existsSync(logoPath)) throw new Error('Logo dosyası bulunamadı.');
-
-  for (let i = 0; i < videos.length; i += 1) {
-    const video = videos[i];
-    const hash = await hashFile(video.path);
-    if (historyMap.has(hash)) {
-      const skipped = { name: video.name, status: 'skipped', progress: 100, message: 'Daha önce işlendi' };
-      results.push(skipped);
-      event.sender.send('process-progress', { index: i, total: videos.length, ...skipped });
-      continue;
-    }
-    const base = path.parse(video.name).name;
-    const outputPath = path.join(outputDir, `${safeName(base)}_logo_9x16.mp4`);
-    const margin = Math.max(0, Math.min(0.2, Number(settings.margin) || 0.04));
-    const logoW = Math.max(0.05, Math.min(0.8, Number(settings.logoWidth) || 0.22));
-    const x = Math.max(0, Math.min(1 - logoW, Number(settings.logoX) || 0.74));
-    const y = Math.max(0, Math.min(1 - 0.2, Number(settings.logoY) || 0.05));
-    const filter = `[0:v]scale=iw*max(720/iw\,1280/ih):ih*max(720/iw\,1280/ih),crop=720:1280:(in_w-720)/2:(in_h-1280)/2,setsar=1[base];[1:v]format=rgba,colorchannelmixer=aa=${Math.max(0.05, Math.min(1, Number(settings.opacity) || 1))},scale=iw*${logoW}/0.22:-1[logo];[base][logo]overlay=x='(main_w-overlay_w)*${x / (1 - logoW)}':y='main_h*${y}':eval=frame[out]`;
-    const args = ['-y', '-i', video.path, '-i', logoPath, '-filter_complex', filter, '-map', '[out]', '-map', '0:a?', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', outputPath];
-    const job = { name: video.name, status: 'processing', progress: 0, message: 'Hazırlanıyor' };
-    event.sender.send('process-progress', { index: i, total: videos.length, ...job });
-    await new Promise((resolve, reject) => {
-      const proc = spawn(getFfmpegPath(), args);
-      let duration = 0;
-      let lastProgress = 0;
-      let stderr = '';
-      proc.stderr.on('data', chunk => {
-        stderr += chunk.toString();
-        const d = /Duration: (\d+):(\d+):(\d+(?:\.\d+)?)/.exec(stderr);
-        if (d && !duration) duration = Number(d[1]) * 3600 + Number(d[2]) * 60 + Number(d[3]);
-        const t = /time=(\d+):(\d+):(\d+(?:\.\d+)?)/.exec(chunk.toString());
-        if (t && duration) {
-          const current = Number(t[1]) * 3600 + Number(t[2]) * 60 + Number(t[3]);
-          lastProgress = Math.min(99, Math.round((current / duration) * 100));
-          event.sender.send('process-progress', { index: i, total: videos.length, name: video.name, status: 'processing', progress: lastProgress, message: 'İşleniyor' });
-        }
-      });
-      proc.on('error', reject);
-      proc.on('close', code => code === 0 ? resolve() : reject(new Error(stderr.slice(-500) || `FFmpeg hata kodu: ${code}`)));
+  if (videoWorker) throw new Error('Başka bir işlem zaten devam ediyor.');
+  const history = getHistory();
+  const historyMap = new Map(history.map(item => [item.hash, item]));
+  const workerPath = app.isPackaged ? path.join(process.resourcesPath, 'video-worker.js') : path.join(__dirname, 'video-worker.js');
+  return new Promise((resolve, reject) => {
+    videoWorker = fork(workerPath, [], { windowsHide: true });
+    const cleanup = () => { if (videoWorker) { videoWorker.removeAllListeners(); videoWorker = null; } };
+    videoWorker.on('message', message => {
+      if (message.type === 'progress') event.sender.send('process-progress', message);
+      if (message.type === 'record') { history.push(message.record); historyMap.set(message.record.hash, message.record); writeJson(historyPath, history); }
+      if (message.type === 'finished' || message.type === 'stopped') { cleanup(); resolve(message.results || []); }
+      if (message.type === 'fatal-error') { cleanup(); reject(new Error(message.message)); }
     });
-    const record = { hash, name: video.name, outputPath, processedAt: new Date().toISOString() };
-    history.push(record);
-    historyMap.set(hash, record);
-    writeJson(historyPath, history);
-    const done = { name: video.name, status: 'done', progress: 100, message: 'Tamamlandı', outputPath };
-    results.push(done);
-    event.sender.send('process-progress', { index: i, total: videos.length, ...done });
-  }
-  return results;
+    videoWorker.on('error', error => { cleanup(); reject(error); });
+    videoWorker.send({ type: 'process-batch', payload: { videos, settings, historyHashes: [...historyMap.keys()], ffmpegPath: getFfmpegPath(), outputDir } });
+  });
 });

@@ -18,6 +18,7 @@
       <div class="window-controls"><button>—</button><button>□</button><button>×</button></div>
     </header>
 
+    <div class="update-banner hidden" id="updateBanner"><div><strong id="updateTitle">Yeni güncelleme bulundu</strong><span id="updateMessage">Yeni sürüm hazır.</span></div><div class="update-actions"><button class="button button-gold" id="updateActionBtn">İndir</button><button class="update-close" id="closeUpdateBanner">×</button></div></div>
     <div class="workspace">
       <aside class="sidebar">
         <nav>
@@ -58,10 +59,10 @@
         </section>
 
         <section id="historyPage" class="page"><div class="page-heading"><div><h1>İşlem Geçmişi</h1><p>Daha önce işlenen videolar burada tutulur.</p></div><button class="button button-dark" id="clearHistory">Geçmişi Temizle</button></div><section class="panel history-panel"><div class="history-table-head"><span>Video</span><span>İşlenme tarihi</span><span>Çıktı</span></div><div id="historyList" class="history-list"></div></section></section>
-        <section id="settingsPage" class="page"><div class="page-heading"><div><h1>Ayarlar</h1><p>Çıktı ve logo tercihlerini yönet.</p></div></div><section class="panel settings-panel"><div class="setting-row"><div><h3>Logo dosyası</h3><p id="logoSettingPath">Varsayılan logo</p></div><button class="button button-blue" id="chooseLogoSettings">Logo Seç</button></div><div class="setting-row"><div><h3>Çıktı klasörü</h3><p id="outputSettingPath">Masaüstü\PrimeVideoLogo</p></div><button class="button button-blue" id="chooseOutput">Klasör Seç</button></div><div class="setting-row"><div><h3>Video kadrajı</h3><p>İçerik 9:16 dikey tuvale ortalanarak yerleştirilir.</p></div><span class="setting-badge">9:16</span></div><div class="setting-row update-row"><div><h3>GitHub güncellemeleri</h3><p id="versionText">Sürüm bilgisi yükleniyor...</p></div><button class="button button-gold" id="openReleasePage">Güncellemeleri Aç</button></div></section></section>
+        <section id="settingsPage" class="page"><div class="page-heading"><div><h1>Ayarlar</h1><p>Çıktı ve logo tercihlerini yönet.</p></div></div><section class="panel settings-panel"><div class="setting-row"><div><h3>Logo dosyası</h3><p id="logoSettingPath">Varsayılan logo</p></div><button class="button button-blue" id="chooseLogoSettings">Logo Seç</button></div><div class="setting-row"><div><h3>Çıktı klasörü</h3><p id="outputSettingPath">Masaüstü\Edilmiş Videolar</p></div><button class="button button-blue" id="chooseOutput">Klasör Seç</button></div><div class="setting-row"><div><h3>Video kadrajı</h3><p>İçerik 9:16 dikey tuvale ortalanarak yerleştirilir.</p></div><span class="setting-badge">9:16</span></div><div class="setting-row update-row"><div><h3>GitHub otomatik güncellemeleri</h3><p id="versionText">Sürüm bilgisi yükleniyor...</p></div><div class="update-setting-actions"><button class="button button-blue" id="checkUpdateBtn">Kontrol Et</button><button class="button button-dark" id="openReleasePage">Release Sayfası</button></div></div></section></section>
       </main>
     </div>
-    <footer class="statusbar"><div>▱ <span>Çıktı klasörü:</span> <strong id="outputPathText">Masaüstü\PrimeVideoLogo</strong></div><div><span class="status-dot"></span><strong id="footerStatus">Kayıt aktif</strong></div></footer>
+    <footer class="statusbar"><div>▱ <span>Çıktı klasörü:</span> <strong id="outputPathText">Masaüstü\Edilmiş Videolar</strong></div><div><span class="status-dot"></span><strong id="footerStatus">Kayıt aktif</strong></div></footer>
   </div>
   <script src="renderer.js"></script>
 </body>

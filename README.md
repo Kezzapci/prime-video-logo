@@ -4,7 +4,7 @@ Prime Video Logo, Windows üzerinde klasördeki videoları seri olarak işleyen,
 
 ## Özellikler
 
-Uygulama MP4, MOV, MKV, AVI, WEBM ve M4V videolarını tarar. Videolar 720×1280 9:16 tuvaline ortalanır, logo sağ üstte varsayılan olarak uygulanır ve çıktı `Masaüstü\PrimeVideoLogo` klasörüne yazılır. Ön izleme ekranında logo fareyle sürüklenebilir; boyut ve opaklık ayarlanabilir; hazır köşe konumları kullanılabilir. SHA-256 dosya parmak iziyle daha önce tamamlanan videolar otomatik atlanır ve geçmiş `history.json` içinde tutulur.
+Uygulama MP4, MOV, MKV, AVI, WEBM ve M4V videolarını tarar. Videolar 720×1280 9:16 tuvaline ortalanır, seçilen logo varsayılan olarak sağ üste uygulanır ve çıktı `Masaüstü\Edilmiş Videolar` klasörüne yazılır. Ön izleme ekranında logo fareyle sürüklenebilir; boyut ve opaklık ayarlanabilir; hazır köşe konumları kullanılabilir. FFmpeg işleri ayrı bir arka plan worker'ında tek tek yürütüldüğü için ana pencere işlem sırasında donmaz. SHA-256 dosya parmak iziyle daha önce tamamlanan videolar otomatik atlanır ve geçmiş `history.json` içinde tutulur.
 
 ## Windows kurulumu
 
@@ -22,7 +22,7 @@ git tag v1.0.1
 git push origin v1.0.1
 ```
 
-`v*.*.*` etiketi GitHub Actions akışını çalıştırır. Akış Windows üzerinde FFmpeg'i indirir, setup ve portable EXE üretir ve dosyaları GitHub Releases bölümüne ekler. Uygulamanın **Ayarlar → GitHub güncellemeleri → Güncellemeleri Aç** düğmesi son yayımlanan setup dosyalarının bulunduğu Releases sayfasını açar.
+`v*.*.*` etiketi GitHub Actions akışını çalıştırır. Akış Windows üzerinde FFmpeg'i indirir, setup ve portable EXE üretir ve dosyaları GitHub Releases bölümüne ekler. Kurulu EXE, GitHub Releases'ı açılışta kontrol eder; yeni sürüm bulunduğunda uygulama içinden indirme ve yeniden başlatma ile güncelleme yapılabilir. Ayarlar ekranındaki kontrol düğmesiyle manuel kontrol de başlatılabilir.
 
 ## Yerel geliştirme
 

@@ -9,8 +9,13 @@ contextBridge.exposeInMainWorld('primeAPI', {
   openOutput: folder => ipcRenderer.invoke('open-output', folder),
   openReleasePage: () => ipcRenderer.invoke('open-release-page'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  downloadUpdate: () => ipcRenderer.invoke('download-update'),
+  installUpdate: () => ipcRenderer.invoke('install-update'),
   clearHistory: () => ipcRenderer.invoke('clear-history'),
   previewFrame: video => ipcRenderer.invoke('preview-frame', video),
   processVideos: payload => ipcRenderer.invoke('process-videos', payload),
-  onProgress: callback => ipcRenderer.on('process-progress', (_event, data) => callback(data))
+  stopProcessing: () => ipcRenderer.invoke('stop-processing'),
+  onProgress: callback => ipcRenderer.on('process-progress', (_event, data) => callback(data)),
+  onUpdateStatus: callback => ipcRenderer.on('update-status', (_event, data) => callback(data))
 });

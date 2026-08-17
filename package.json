@@ -1,6 +1,6 @@
 {
   "name": "prime-video-logo",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Prime Video Logo - seri video logo ve 9:16 dönüştürme masaüstü uygulaması",
   "main": "main.js",
   "author": "Prime Video Logo",
@@ -18,7 +18,9 @@
   "build": {
     "appId": "com.primevideologo.app",
     "productName": "Prime Video Logo",
-    "directories": { "output": "dist" },
+    "directories": {
+      "output": "dist"
+    },
     "files": [
       "**/*",
       "!design-mockup.png",
@@ -26,14 +28,34 @@
       "!node_modules/.cache/**/*"
     ],
     "extraResources": [
-      { "from": "vendor/ffmpeg/ffmpeg.exe", "to": "ffmpeg/ffmpeg.exe" },
-      { "from": "assets/logo.png", "to": "assets/logo.png" }
+      {
+        "from": "vendor/ffmpeg/ffmpeg.exe",
+        "to": "ffmpeg/ffmpeg.exe"
+      },
+      {
+        "from": "assets/logo.png",
+        "to": "assets/logo.png"
+      },
+      {
+        "from": "video-worker.js",
+        "to": "video-worker.js"
+      }
     ],
     "win": {
       "icon": "build/icon.ico",
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {
@@ -49,7 +71,15 @@
       "artifactName": "PrimeVideoLogo-Portable-${version}.${ext}"
     },
     "publish": [
-      { "provider": "github", "owner": "Kezzapci", "repo": "prime-video-logo", "releaseType": "release" }
+      {
+        "provider": "github",
+        "owner": "Kezzapci",
+        "repo": "prime-video-logo",
+        "releaseType": "release"
+      }
     ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }
