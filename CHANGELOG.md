@@ -1,3 +1,12 @@
+## v1.6.1 — Çıktı Klasörü Güvenlik Yaması
+
+- İşlem başlamadan önce `Masaüstü\Edilmiş Videolar` çıktı klasörü otomatik oluşturulur.
+- Çıktı klasörünün yazma izni işlem öncesi kontrol edilir.
+- Worker, gerçek MP4 oluşmadan işlemi başarılı olarak işaretlemez.
+- İşlem tamamlanınca gerçek done/skipped/error sayıları kullanıcıya gösterilir.
+- Ayarlar ekranına doğrudan `Klasörü aç` düğmesi eklendi.
+- Eski veya sembolik çıktı yolları güvenli biçimde varsayılan klasöre normalize edilir.
+
 # Değişiklik Günlüğü
 
 ## v1.6.0 — Neo Studio ve oran kilitli logo render

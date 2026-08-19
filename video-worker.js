@@ -101,6 +101,7 @@ async function processOne(index, total, video, settings, historyHashes, ffmpegPa
   }
 
   if (stopRequested) return { stopped: true };
+  if (!fs.existsSync(outputPath)) throw new Error('FFmpeg tamamlandı ancak çıktı dosyası oluşturulmadı.');
   const record = { hash, name: video.name, outputPath, processedAt: new Date().toISOString() };
   historyHashes.add(hash);
   send({ type: 'record', record });

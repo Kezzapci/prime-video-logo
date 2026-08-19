@@ -30,7 +30,7 @@ function ensureDataFiles() {
   if (!fs.existsSync(historyPath)) fs.writeFileSync(historyPath, JSON.stringify([], null, 2));
   if (!fs.existsSync(settingsPath)) fs.writeFileSync(settingsPath, JSON.stringify({
     logoPath: defaultLogoPath,
-    outputPath: path.join(app.getPath('desktop'), 'Edilmiş Videolar'),
+    outputPath: defaultOutputPath(),
     logoX: 0.74,
     logoY: 0.05,
     logoWidth: 0.22,
@@ -66,6 +66,12 @@ function hashFile(filePath) {
   });
 }
 function safeName(name) { return name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_'); }
+function defaultOutputPath() { return path.join(app.getPath('desktop'), 'Edilmiş Videolar'); }
+function normalizeOutputPath(candidate) {
+  const value = typeof candidate === 'string' ? candidate.trim() : '';
+  if (!value || value === 'Masaüstü\\Edilmiş Videolar' || value === 'Desktop\\Edilmiş Videolar') return defaultOutputPath();
+  return path.resolve(value);
+}
 function isVideo(file) { return /\.(mp4|mov|mkv|avi|webm|m4v)$/i.test(file); }
 
 function logEvent(level, message, details = {}) {
@@ -113,7 +119,7 @@ function repairSystem() {
   ensureDataFiles();
   const settings = getSettings();
   const defaultLogoPath = app.isPackaged ? path.join(process.resourcesPath, 'assets', 'logo.png') : path.join(__dirname, 'assets', 'logo.png');
-  if (!settings.outputPath) settings.outputPath = path.join(app.getPath('desktop'), 'Edilmiş Videolar');
+  settings.outputPath = normalizeOutputPath(settings.outputPath);
   if (!settings.logoPath || !fs.existsSync(settings.logoPath)) settings.logoPath = defaultLogoPath;
   fs.mkdirSync(settings.outputPath, { recursive: true });
   writeJson(settingsPath, settings);
@@ -387,12 +393,15 @@ ipcMain.handle('scan-folder', async (_event, folderPath) => {
   if (!folderPath || !fs.existsSync(folderPath)) return [];
   return fs.readdirSync(folderPath).filter(isVideo).map(name => ({ name, path: path.join(folderPath, name) }));
 });
-ipcMain.handle('save-settings', (_event, settings) => {
-  writeJson(settingsPath, settings);
-  return settings;
+ipcMain.handle('save-settings', (_event, settings = {}) => {
+  const normalized = { ...settings, outputPath: normalizeOutputPath(settings.outputPath) };
+  writeJson(settingsPath, normalized);
+  return normalized;
 });
-ipcMain.handle('open-output', (_event, folderPath) => {
-  if (folderPath) { fs.mkdirSync(folderPath, { recursive: true }); shell.openPath(folderPath); }
+ipcMain.handle('open-output', async (_event, folderPath) => {
+  const target = normalizeOutputPath(folderPath);
+  fs.mkdirSync(target, { recursive: true });
+  return shell.openPath(target);
 });
 ipcMain.handle('open-release-page', () => {
   const configPath = path.join(__dirname, 'update-config.json');
@@ -418,8 +427,16 @@ ipcMain.handle('stop-processing', () => {
 });
 ipcMain.handle('process-videos', async (event, payload) => {
   const { videos, settings } = payload;
-  const outputDir = settings.outputPath || path.join(app.getPath('desktop'), 'Edilmiş Videolar');
-  const logoPath = settings.logoPath;
+  const outputDir = normalizeOutputPath(settings?.outputPath);
+  const jobSettings = { ...settings, outputPath: outputDir };
+  const logoPath = jobSettings.logoPath;
+  try {
+    fs.mkdirSync(outputDir, { recursive: true });
+    fs.accessSync(outputDir, fs.constants.W_OK);
+  } catch (error) {
+    logEvent('error', 'Çıktı klasörü hazırlanamadı', { outputDir, error: String(error?.message || error) });
+    throw new Error(`Çıktı klasörüne yazılamıyor: ${outputDir}`);
+  }
   if (!logoPath || !fs.existsSync(logoPath)) { logEvent('warn', 'Logo dosyası bulunamadı', { logoPath }); throw new Error('Logo dosyası bulunamadı.'); }
   if (videoWorker) throw new Error('Başka bir işlem zaten devam ediyor.');
   const history = getHistory();
@@ -435,6 +452,6 @@ ipcMain.handle('process-videos', async (event, payload) => {
       if (message.type === 'fatal-error') { logEvent('error', 'Video worker beklenmeyen hata verdi', { error: message.message }); cleanup(); reject(new Error(message.message)); }
     });
     videoWorker.on('error', error => { cleanup(); reject(error); });
-    videoWorker.send({ type: 'process-batch', payload: { videos, settings, historyHashes: [...historyMap.keys()], ffmpegPath: getFfmpegPath(), outputDir } });
+    videoWorker.send({ type: 'process-batch', payload: { videos, settings: jobSettings, historyHashes: [...historyMap.keys()], ffmpegPath: getFfmpegPath(), outputDir } });
   });
 });
