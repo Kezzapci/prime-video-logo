@@ -4,110 +4,64 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: file:; img-src 'self' data: file:; media-src 'self' file:; style-src 'self' 'unsafe-inline'; script-src 'self';" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Prime Video Logo — Ultra Studio</title>
+  <title>Prime Video Logo — Neo Studio</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="ambient ambient-cyan"></div>
-  <div class="ambient ambient-gold"></div>
-  <div class="ambient ambient-core"></div>
-  <div class="grain"></div>
-
+  <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="ambient ambient-c"></div><div class="noise"></div>
   <div class="app-shell">
     <header class="topbar">
       <div class="brand-lockup">
         <div class="brand-mark"><span>✦</span><i></i></div>
-        <div class="brand-copy">
-          <div class="brand-name"><strong>PRIME</strong> VIDEO <em>LOGO</em></div>
-          <div class="brand-subtitle">ULTRA VIDEO STUDIO <b>·</b> UMUT SARIYER</div>
-        </div>
+        <div><div class="brand-name">PRIME <strong>VIDEO</strong> <em>LOGO</em></div><div class="brand-subtitle">NEO STUDIO <b>·</b> CREATIVE OPERATIONS</div></div>
       </div>
-      <div class="topbar-center">
-        <span class="live-pulse"></span>
-        <span id="topStatus">Hazır</span>
-        <span class="topbar-divider"></span>
-        <span class="topbar-meta">500+ video pipeline</span>
-      </div>
-      <div class="topbar-right">
-        <div class="top-status"><span class="status-dot"></span><span id="readyChip">Sistem hazır</span></div>
-        <div class="window-controls"><button aria-label="Simge durumuna küçült">—</button><button aria-label="Pencereyi büyüt">□</button><button aria-label="Kapat">×</button></div>
-      </div>
+      <div class="topline-status"><span class="live-pulse"></span><span id="topStatus">Hazır</span><i></i><span>LOCAL PIPELINE</span></div>
+      <div class="topbar-actions"><div class="secure-chip"><span class="status-dot"></span><span id="readyChip">Sistem hazır</span></div><button class="top-action" id="chooseInput"><span>＋</span> Klasör aç</button><div class="window-controls"><button aria-label="Simge durumuna küçült">—</button><button aria-label="Pencereyi büyüt">□</button><button aria-label="Kapat">×</button></div></div>
     </header>
 
-    <div class="update-banner hidden" id="updateBanner">
-      <div class="update-icon"><span>↗</span></div>
-      <div class="update-copy"><strong id="updateTitle">Yeni güncelleme bulundu</strong><span id="updateMessage">Yeni sürüm hazır.</span></div>
-      <div class="update-actions"><button class="button button-gold" id="updateActionBtn">İndir</button><button class="update-close" id="closeUpdateBanner" aria-label="Kapat">×</button></div>
-    </div>
+    <div class="update-banner hidden" id="updateBanner"><div class="update-icon">↗</div><div class="update-copy"><strong id="updateTitle">Yeni güncelleme bulundu</strong><span id="updateMessage">Yeni sürüm hazır.</span></div><div class="update-actions"><button class="button button-gold" id="updateActionBtn">İndir</button><button class="update-close" id="closeUpdateBanner">×</button></div></div>
 
     <div class="workspace">
-      <aside class="sidebar">
-        <div class="sidebar-topline"><span class="sidebar-label">WORKSPACE</span><span class="sidebar-version">ULTRA</span></div>
+      <aside class="command-rail">
+        <div class="rail-label">COMMAND RAIL</div>
         <nav>
-          <button class="nav-item active" data-page="center"><span class="nav-icon">▦</span><span><b>İşlem Merkezi</b><small>Üretim alanı</small></span><strong>01</strong></button>
-          <button class="nav-item" data-page="history"><span class="nav-icon">◔</span><span><b>Geçmiş</b><small>İşlem kayıtları</small></span><strong>02</strong></button>
-          <button class="nav-item" data-page="settings"><span class="nav-icon">⚙</span><span><b>Ayarlar</b><small>Sistem kontrolü</small></span><strong>03</strong></button>
+          <button class="nav-item active" data-page="center"><span class="nav-icon">⌘</span><span><b>Stüdyo</b><small>Üretim merkezi</small></span><strong>01</strong></button>
+          <button class="nav-item" data-page="history"><span class="nav-icon">◷</span><span><b>Arşiv</b><small>İşlem geçmişi</small></span><strong>02</strong></button>
+          <button class="nav-item" data-page="settings"><span class="nav-icon">◈</span><span><b>Sistem</b><small>Ayarlar & sağlık</small></span><strong>03</strong></button>
         </nav>
-        <div class="sidebar-visual"><div class="visual-orbit orbit-one"></div><div class="visual-orbit orbit-two"></div><div class="visual-center">✦</div><span class="visual-caption">CREATIVE<br>PIPELINE</span></div>
-        <div class="sidebar-tip"><span class="tip-icon">✦</span><div><strong>Akıllı iş akışı</strong><p>Logoyu ön izlemede taşı. Sistem her ayarı otomatik hatırlar.</p></div></div>
-        <div class="sidebar-footer"><span class="shield">✓</span><span>Yerel ve güvenli çalışma alanı</span></div>
+        <div class="rail-module"><div class="module-orbit"><span>✦</span></div><div><small>ENGINE STATUS</small><strong>ACTIVE / 09</strong></div><i class="module-line"></i></div>
+        <div class="rail-note"><span>↗</span><div><strong>Akıllı kuyruk</strong><p>Görünmeyen satırlar belleğe alınmaz.</p></div></div>
+        <div class="rail-bottom"><span class="shield">✓</span><span>Yerel çalışma alanı</span></div>
       </aside>
 
       <main class="main-content">
         <section id="centerPage" class="page active-page">
-          <div class="hero-heading">
-            <div class="hero-copy">
-              <div class="eyebrow"><span class="eyebrow-line"></span> PRIME CREATIVE ENGINE <span class="eyebrow-dot"></span></div>
-              <h1>Dikey içerik üretim <span>odası.</span></h1>
-              <p>Videolarını tek akışta hazırla, logonu özgürce konumlandır ve her çıktıyı kusursuz 9:16 formatında üret.</p>
-            </div>
-            <div class="hero-actions"><div class="hero-badge"><span class="badge-pulse"></span><strong>ULTRA MODE</strong><small>500+ video hazır</small></div><button class="button button-blue button-hero" id="chooseInput"><span>＋</span> Video klasörü seç</button></div>
+          <div class="hero-row"><div><div class="eyebrow"><span></span> CREATIVE OPERATIONS / 01</div><h1>Videonu <span>prime</span> hale getir.</h1><p>Kaynak klasörünü bağla, logonu doğru oranla kadraja yerleştir ve yüzlerce videoyu tek akışta üret.</p></div><div class="hero-meta"><div class="hero-meta-top"><span class="hero-dot"></span> SYSTEM READY</div><strong>9:16 <small>VERTICAL OUTPUT</small></strong><button class="button button-blue hero-folder" id="chooseInputSmall"><span>＋</span> Kaynak klasörü seç</button></div></div>
+
+          <div class="metric-grid">
+            <div class="metric metric-cyan"><div class="metric-head"><span>01 / QUEUE</span><b>LIVE</b></div><strong id="statVideos">0</strong><p id="scanText">Klasör bekleniyor</p><div class="metric-wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+            <div class="metric metric-gold"><div class="metric-head"><span>02 / OUTPUT</span><b>SESSION</b></div><strong id="statDone">0</strong><p>Tamamlanan video</p><div class="metric-ring"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16"></circle><circle id="statRingValue" cx="20" cy="20" r="16"></circle></svg></div></div>
+            <div class="metric metric-green"><div class="metric-head"><span>03 / HEALTH</span><b>GUARDED</b></div><strong id="statHealth">Hazır</strong><p>Otomatik koruma aktif</p><span class="metric-status status-dot"></span></div>
+            <div class="metric metric-violet"><div class="metric-head"><span>04 / CANVAS</span><b>LOCKED</b></div><strong>720×1280</strong><p>9:16 dikey çıktı</p><div class="canvas-icon"><i></i><i></i><i></i></div></div>
           </div>
 
-          <div class="stat-grid">
-            <div class="stat-card stat-blue"><div class="stat-icon">▱</div><div><small>KUYRUKTAKİ VİDEO</small><strong id="statVideos">0</strong><span id="scanText">Klasör bekleniyor</span></div><div class="stat-spark"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
-            <div class="stat-card stat-gold"><div class="stat-icon">◌</div><div><small>TAMAMLANAN</small><strong id="statDone">0</strong><span>Bu oturum</span></div><div class="stat-ring"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16"></circle><circle id="statRingValue" cx="20" cy="20" r="16"></circle></svg></div></div>
-            <div class="stat-card stat-green"><div class="stat-icon">✓</div><div><small>SİSTEM DURUMU</small><strong id="statHealth">Hazır</strong><span>Otomatik koruma açık</span></div><div class="mini-status"><span class="status-dot"></span></div></div>
-            <div class="stat-card stat-purple"><div class="stat-icon">↯</div><div><small>ÇIKTI FORMATI</small><strong>9:16</strong><span>1080 × 1920 dikey</span></div><div class="format-mark"><b></b><b></b><b></b></div></div>
+          <div class="studio-grid">
+            <section class="panel source-panel"><div class="panel-head"><div class="panel-number cyan">01</div><div><span class="panel-kicker">SOURCE LIBRARY</span><h2>Video kütüphanesi</h2></div><span class="panel-live">VIRTUAL</span></div><div class="source-picker"><input id="inputPath" readonly placeholder="Kaynak klasörü seç..." /><button class="button button-blue" id="chooseInputLibrary"><span>↗</span> Aç</button></div><div class="list-meta"><span id="videoCount">0 video</span><small>SHA-256 tekrar koruması açık</small></div><div class="video-list" id="videoList"><div class="empty-state"><span class="empty-orbit">⌁</span><strong>Kaynak bağlantısı bekleniyor</strong><small>MP4 · MOV · MKV · AVI · WEBM</small><em>Klasör açarak başla</em></div></div><div class="panel-foot"><span class="foot-pulse"></span><span>Lazy thumbnail / düşük RAM modu</span><b>1000+</b></div></section>
+
+            <section class="panel composer-panel"><div class="panel-head"><div class="panel-number cyan">02</div><div><span class="panel-kicker">LIVE COMPOSER</span><h2>Logo kompozisyonu</h2></div><button class="icon-button" id="chooseLogo" title="Logo seç">＋</button></div><div class="composer-toolbar"><span><i></i> LIVE PREVIEW</span><b id="logoPositionValue">74%, 5%</b></div><div class="preview-stage-wrap"><div class="preview-stage" id="previewStage"><img id="previewImage" alt="Video ön izlemesi" /><div class="preview-placeholder" id="previewPlaceholder"><div class="placeholder-mark">✦</div><strong>Ön izleme alanı</strong><small>Kaynak listesinden video seç</small></div><img id="logoOverlay" class="logo-overlay" alt="Logo" draggable="false" /><div class="safe-frame"></div><div class="corner-mark top-left"></div><div class="corner-mark top-right"></div><div class="corner-mark bottom-left"></div><div class="corner-mark bottom-right"></div><div class="stage-crosshair horizontal"></div><div class="stage-crosshair vertical"></div></div><div class="drag-hint"><span>✥</span><strong>Logoyu sürükleyerek yerleştir</strong><small>SAFE AREA / ASPECT LOCK</small></div></div><div class="preset-row"><button class="preset active" data-pos="top-right">Sağ üst</button><button class="preset" data-pos="top-left">Sol üst</button><button class="preset" data-pos="bottom-right">Sağ alt</button><button class="preset" data-pos="bottom-left">Sol alt</button></div><div class="control-stack"><div class="slider-control"><label>Boyut <span id="sizeValue">22%</span></label><input id="sizeSlider" type="range" min="8" max="45" value="22" /></div><div class="slider-control"><label>Opaklık <span id="opacityValue">100%</span></label><input id="opacitySlider" type="range" min="10" max="100" value="100" /></div></div><div class="spec-row"><span><b>▯</b> 720 × 1280</span><span><b>◉</b> Ses korunur</span><span><b>✦</b> Oran kilitli</span></div></section>
+
+            <section class="panel queue-panel"><div class="panel-head"><div class="panel-number gold">03</div><div><span class="panel-kicker">RENDER QUEUE</span><h2>İşlem kuyruğu</h2></div><span class="queue-count" id="queueCount">0</span></div><div class="queue-top"><div><span>OVERALL PROGRESS</span><strong id="queueProgressLabel">Hazır</strong></div><b id="queueOverallPercent">0%</b></div><div class="overall-progress"><i id="queueProgressOverall"></i></div><div class="queue-list" id="queueList"><div class="empty-state compact"><span class="empty-orbit gold-orbit">☷</span><strong>Kuyruk boş</strong><small>Kaynak klasörü seçildiğinde işler burada görünür.</small></div></div><div class="queue-actions"><button class="button button-gold" id="startBtn"><span>▶</span> Seriyi başlat</button><button class="button button-dark" id="stopBtn" disabled><span>■</span> Durdur</button></div><div class="queue-note"><span>ⓘ</span> İşlenen dosyalar otomatik kaydedilir ve tekrar atlanır.</div></section>
           </div>
 
-          <div class="dashboard-grid">
-            <section class="panel source-panel reveal-card">
-              <div class="panel-heading"><div class="panel-icon blue">▱</div><div><div class="panel-kicker">SOURCE LIBRARY</div><h2>Video Kütüphanesi</h2><p>İşlenecek kaynakları seç</p></div><span class="step-tag">01</span></div>
-              <div class="folder-row"><input id="inputPath" readonly placeholder="Video klasörünü seç..." /><button class="button button-blue" id="chooseInputSmall">Seç <span>→</span></button></div>
-              <div class="count-row"><span class="count-badge" id="videoCount">0 video</span><span class="muted">Akıllı sanal liste aktif</span></div>
-              <div class="video-list" id="videoList"><div class="empty-state"><span class="empty-orbit">◌</span><strong>Video klasörü bekleniyor</strong><small>MP4, MOV, MKV, AVI veya WEBM</small><span class="empty-action">Klasör seçerek başla</span></div></div>
-              <div class="library-footer"><span class="library-pulse"></span><span>Yalnızca ekranda görünen kareler yüklenir</span><b>LOW RAM</b></div>
-            </section>
-
-            <section class="panel preview-panel reveal-card">
-              <div class="panel-heading"><div class="panel-icon blue">◉</div><div><div class="panel-kicker">LIVE COMPOSER</div><h2>Logo Kompozisyonu</h2><p>Logonu kadrajda özgürce yerleştir</p></div><span class="step-tag">02</span><button class="icon-button" id="chooseLogo" title="Logo seç">＋</button></div>
-              <div class="preview-toolbar"><span class="toolbar-chip"><i class="toolbar-dot"></i> CANLI ÖN İZLEME</span><span id="logoPositionValue">74%, 5%</span></div>
-              <div class="preview-stage-wrap"><div class="preview-stage" id="previewStage"><img id="previewImage" alt="Video ön izlemesi" /><div class="preview-placeholder" id="previewPlaceholder"><span class="play-orbit">▶</span><strong>İlk videoyu seç</strong><small>Seçtiğin video burada canlı olarak görünür</small></div><img id="logoOverlay" class="logo-overlay" alt="Logo" draggable="false" /><div class="safe-frame"></div><div class="corner-mark top-left"></div><div class="corner-mark top-right"></div><div class="corner-mark bottom-left"></div><div class="corner-mark bottom-right"></div><div class="stage-crosshair horizontal"></div><div class="stage-crosshair vertical"></div></div><div class="drag-hint"><span>↔</span><strong>Logoyu istediğin yere sürükle</strong><i></i><span class="drag-key">DRAG & DROP</span></div></div>
-              <div class="quick-controls"><button class="preset active" data-pos="top-right">Sağ üst</button><button class="preset" data-pos="top-left">Sol üst</button><button class="preset" data-pos="bottom-right">Sağ alt</button><button class="preset" data-pos="bottom-left">Sol alt</button></div>
-              <div class="slider-control"><label>Logo boyutu <span id="sizeValue">22%</span></label><input id="sizeSlider" type="range" min="8" max="45" value="22" /></div>
-              <div class="slider-control"><label>Opaklık <span id="opacityValue">100%</span></label><input id="opacitySlider" type="range" min="10" max="100" value="100" /></div>
-              <div class="preview-tags"><span><b>▯</b> 1080 × 1920</span><span><b>✦</b> Serbest konum</span><span><b>◉</b> Ses korunur</span></div>
-            </section>
-
-            <section class="panel queue-panel reveal-card">
-              <div class="panel-heading"><div class="panel-icon gold">☷</div><div><div class="panel-kicker">RENDER QUEUE</div><h2>İşlem Kuyruğu</h2><p>Seri üretim durumu</p></div><span class="step-tag">03</span><span class="queue-count" id="queueCount">0</span></div>
-              <div class="queue-overview"><div><span>GENEL İLERLEME</span><strong id="queueProgressLabel">Hazır</strong></div><div class="queue-overview-percent" id="queueOverallPercent">0%</div></div><div class="overall-progress"><i id="queueProgressOverall"></i></div>
-              <div class="queue-list" id="queueList"><div class="empty-state compact"><span class="empty-orbit gold-orbit">☷</span><strong>Kuyruk boş</strong><small>Video klasörü seçildiğinde burada görünür.</small></div></div>
-              <div class="queue-actions"><button class="button button-gold" id="startBtn"><span>▶</span> SERİ İŞLEMİ BAŞLAT</button><button class="button button-dark" id="stopBtn" disabled><span>■</span> İşlemi durdur</button></div>
-              <div class="skip-note"><span>ⓘ</span><span>Aynı dosya SHA-256 ile otomatik atlanır.</span></div>
-            </section>
-          </div>
-
-          <div class="bottom-grid"><div class="bottom-insight"><div class="insight-icon">✦</div><div><strong>Akıllı koruma açık</strong><span>İşlem geçmişi, ses kontrolü ve otomatik onarım her çıktı için aktif.</span></div><span class="insight-status">AKTİF</span></div><div class="rights-banner"><span class="rights-line"></span><div><small>BRAND OWNERSHIP</small><strong>TÜM HAKLARI <b>UMUT SARIYER’E</b> AİTTİR</strong></div><span class="rights-line"></span></div></div>
+          <div class="bottom-strip"><div class="protection-card"><span class="protection-icon">✓</span><div><strong>SELF-HEALING PIPELINE</strong><small>FFmpeg · worker · logo · çıktı klasörü sürekli korunur.</small></div><b>ONLINE</b></div><div class="rights-banner"><span></span><div><small>OWNERSHIP MARK</small><strong>TÜM HAKLARI <b>UMUT SARIYER’E</b> AİTTİR</strong></div><span></span></div></div>
         </section>
 
-        <section id="historyPage" class="page"><div class="page-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> ACTIVITY LOG</div><h1>İşlem Geçmişi <span class="heading-accent">/ kayıt merkezi</span></h1><p>Daha önce işlenen videoların parmak izi ve çıktı kayıtları.</p></div><button class="button button-dark" id="clearHistory">Geçmişi temizle</button></div><section class="panel history-panel"><div class="history-table-head"><span>Video</span><span>İşlenme tarihi</span><span>Çıktı yolu</span></div><div id="historyList" class="history-list"></div></section></section>
+        <section id="historyPage" class="page"><div class="page-heading"><div><div class="eyebrow"><span></span> ACTIVITY ARCHIVE / 02</div><h1>İşlem <span>arşivi</span></h1><p>İşlenen videoların kayıtları ve çıktıları burada tutulur.</p></div><button class="button button-dark" id="clearHistory">Geçmişi temizle</button></div><section class="panel history-panel"><div class="history-table-head"><span>Video</span><span>İşlem tarihi</span><span>Çıktı yolu</span></div><div id="historyList" class="history-list"></div></section></section>
 
-        <section id="settingsPage" class="page"><div class="page-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span> CONTROL ROOM</div><h1>Sistem ayarları <span class="heading-accent">/ güvenli kontrol</span></h1><p>Çıktı, logo, güncelleme ve otomatik onarım tercihlerini yönet.</p></div></div><section class="panel settings-panel"><div class="setting-row"><div><div class="setting-kicker">BRANDING</div><h3>Logo dosyası</h3><p id="logoSettingPath">Varsayılan logo</p></div><button class="button button-blue" id="chooseLogoSettings">Logo seç <span>→</span></button></div><div class="setting-row"><div><div class="setting-kicker">DESTINATION</div><h3>Çıktı klasörü</h3><p id="outputSettingPath">Masaüstü\Edilmiş Videolar</p></div><button class="button button-blue" id="chooseOutput">Klasör seç <span>→</span></button></div><div class="setting-row"><div><div class="setting-kicker">CANVAS</div><h3>Video kadrajı</h3><p>İçerik 9:16 dikey tuvale ortalanarak yerleştirilir.</p></div><span class="setting-badge">9:16 · 1080×1920</span></div><div class="setting-row update-row"><div><div class="setting-kicker">DELIVERY CHANNEL</div><h3>GitHub otomatik güncellemeleri</h3><p id="versionText">Sürüm bilgisi yükleniyor...</p></div><div class="update-setting-actions"><button class="button button-blue" id="checkUpdateBtn">Kontrol et</button><button class="button button-dark" id="openReleasePage">Release sayfası</button></div></div></section><section class="health-panel panel"><div class="health-header"><div><div class="eyebrow"><span class="eyebrow-line"></span> SELF HEALING</div><h2>Otomatik sistem onarımı</h2><p id="healthSummary">Uygulama bileşenleri kontrol ediliyor...</p></div><div class="health-orb" id="healthOrb"><span>✓</span></div></div><div class="health-grid" id="healthGrid"></div><div class="health-actions"><button class="button button-gold" id="repairBtn"><span>✦</span> SİSTEMİ TARA VE ONAR</button><button class="button button-dark" id="openLogsBtn">Teknik kayıtları aç</button></div></section></section>
+        <section id="settingsPage" class="page"><div class="page-heading"><div><div class="eyebrow"><span></span> SYSTEM CONTROL / 03</div><h1>Sistem <span>ayarları</span></h1><p>Logo, çıktı, güncelleme ve otomatik onarım yönetimi.</p></div></div><section class="panel settings-panel"><div class="setting-row"><div><span class="setting-kicker">BRANDING</span><h3>Logo dosyası</h3><p id="logoSettingPath">Varsayılan logo</p></div><button class="button button-blue" id="chooseLogoSettings">Logo seç <span>↗</span></button></div><div class="setting-row"><div><span class="setting-kicker">DESTINATION</span><h3>Çıktı klasörü</h3><p id="outputSettingPath">Masaüstü\Edilmiş Videolar</p></div><button class="button button-blue" id="chooseOutput">Klasör seç <span>↗</span></button></div><div class="setting-row"><div><span class="setting-kicker">CANVAS</span><h3>Video kadrajı</h3><p>İçerik 9:16 dikey tuvale güvenli biçimde yerleştirilir.</p></div><span class="setting-badge">720×1280 · 9:16</span></div><div class="setting-row update-row"><div><span class="setting-kicker">DELIVERY CHANNEL</span><h3>GitHub otomatik güncellemeleri</h3><p id="versionText">Sürüm bilgisi yükleniyor...</p></div><div class="update-setting-actions"><button class="button button-blue" id="checkUpdateBtn">Kontrol et</button><button class="button button-dark" id="openReleasePage">Release sayfası</button></div></div></section><section class="health-panel panel"><div class="health-header"><div><div class="eyebrow"><span></span> SELF HEALING</div><h2>Otomatik sistem onarımı</h2><p id="healthSummary">Uygulama bileşenleri kontrol ediliyor...</p></div><div class="health-orb" id="healthOrb"><span>✓</span></div></div><div class="health-grid" id="healthGrid"></div><div class="health-actions"><button class="button button-gold" id="repairBtn"><span>✦</span> Sistemi tara ve onar</button><button class="button button-dark" id="openLogsBtn">Teknik kayıtları aç</button></div></section></section>
       </main>
     </div>
-    <footer class="statusbar"><div><span class="footer-dot"></span><span>Çıktı:</span> <strong id="outputPathText">Masaüstü\Edilmiş Videolar</strong></div><div><span class="footer-mode">ULTRA MODE</span><span class="status-dot"></span><strong id="footerStatus">Kayıt aktif</strong></div></footer>
+    <footer class="statusbar"><div><span class="footer-dot"></span><span>Çıktı</span><strong id="outputPathText">Masaüstü\Edilmiş Videolar</strong></div><div><span class="footer-mode">NEO STUDIO / LOCAL</span><span class="status-dot"></span><strong id="footerStatus">Kayıt aktif</strong></div></footer>
   </div>
   <script src="renderer.js"></script>
 </body>

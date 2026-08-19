@@ -1,5 +1,14 @@
 # Değişiklik Günlüğü
 
+## v1.6.0 — Neo Studio ve oran kilitli logo render
+
+- Masaüstü arayüzü baştan tasarlandı: Neo Studio kontrol odası, command rail, yeni metric kartları, canlı kompozisyon alanı ve daha okunaklı render kuyruğu eklendi.
+- Yeni sinematik `neo-studio-bg.png` görsel varlığı ve responsive panel sistemi eklendi.
+- Logo render filtresinde kaynak piksel en-boy oranı `setsar=1` ile sabitlendi; Lanczos ve `force_original_aspect_ratio=decrease` ile logo oranı korunarak ölçekleniyor.
+- Ön izleme ve gerçek render aynı logo oranını kullanıyor; sürükleme ve köşe preset’leri logonun gerçek yüksekliğine göre güvenli alanda sınırlandırılıyor.
+- Çıktı göstergeleri gerçek 720×1280 / 9:16 formatıyla eşitlendi.
+- Sanal kuyruk, SHA-256 tekrar engeli, ses koruma, otomatik onarım ve public GitHub updater korunarak yeni kabuğa taşındı.
+
 ## v1.2.0
 
 ### Premium arayüz
