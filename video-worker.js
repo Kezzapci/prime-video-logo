@@ -35,15 +35,15 @@ function friendlyWorkerError(error) {
   return raw.length > 160 ? `${raw.slice(0, 157)}…` : raw;
 }
 function buildFilter(settings, mode = 'primary') {
-  const logoW = Math.max(0.05, Math.min(0.8, Number(settings.logoWidth) || 0.22));
-  const x = Math.max(0, Math.min(1 - logoW, Number(settings.logoX) || 0.74));
-  const y = Math.max(0, Math.min(0.94, Number(settings.logoY) || 0.05));
+  const logoW = Math.max(0.05, Math.min(0.8, Number(settings.logoWidth) || 0.78));
+  const x = Math.max(0, Math.min(1 - logoW, Number(settings.logoX) || 0.11));
+  const y = Math.max(0, Math.min(0.94, Number(settings.logoY) || 0.68));
   const opacity = Math.max(0.05, Math.min(1, Number(settings.opacity) || 1));
   const logoWidthPx = Math.max(2, Math.round(720 * logoW / 2) * 2);
   const logoXPx = Math.max(0, Math.round(720 * x));
   const logoYPx = Math.max(0, Math.round(1280 * y));
-  if (mode === 'fallback') return `[0:v]scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2,setsar=1[base];[1:v]format=rgba,setsar=1,colorchannelmixer=aa=${opacity},scale=w=${logoWidthPx}:h=-1:force_original_aspect_ratio=decrease:flags=lanczos,setsar=1[logo];[base][logo]overlay=x=${logoXPx}:y=${logoYPx}:repeatlast=1[out]`;
-  return `[0:v]scale=iw*max(720/iw\\,1280/ih):ih*max(720/iw\\,1280/ih),crop=720:1280:(in_w-720)/2:(in_h-1280)/2,setsar=1[base];[1:v]format=rgba,setsar=1,colorchannelmixer=aa=${opacity},scale=w=${logoWidthPx}:h=-1:force_original_aspect_ratio=decrease:flags=lanczos,setsar=1[logo];[base][logo]overlay=x=${logoXPx}:y=${logoYPx}:eval=frame:repeatlast=1[out]`;
+  if (mode === 'fallback') return `[0:v]scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2,setsar=1[base];[1:v]format=rgba,setsar=1,colorchannelmixer=aa=${opacity},scale=w=${logoWidthPx}:h=-1:force_original_aspect_ratio=decrease:flags=lanczos,setsar=1[logo];[base][logo]overlay=x=min(max(0\\,${logoXPx})\\,W-w):y=min(max(0\\,${logoYPx})\\,H-h):repeatlast=1[out]`;
+  return `[0:v]scale=iw*max(720/iw\\,1280/ih):ih*max(720/iw\\,1280/ih),crop=720:1280:(in_w-720)/2:(in_h-1280)/2,setsar=1[base];[1:v]format=rgba,setsar=1,colorchannelmixer=aa=${opacity},scale=w=${logoWidthPx}:h=-1:force_original_aspect_ratio=decrease:flags=lanczos,setsar=1[logo];[base][logo]overlay=x=min(max(0\\,${logoXPx})\\,W-w):y=min(max(0\\,${logoYPx})\\,H-h):eval=frame:repeatlast=1[out]`;
 }
 
 async function processOne(index, total, video, settings, historyHashes, ffmpegPath, outputDir) {

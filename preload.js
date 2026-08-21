@@ -2,6 +2,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('primeAPI', {
   getInitialState: () => ipcRenderer.invoke('get-initial-state'),
+  minimizeWindow: () => ipcRenderer.invoke('window-minimize'),
+  toggleMaximize: () => ipcRenderer.invoke('window-toggle-maximize'),
+  closeWindow: () => ipcRenderer.invoke('window-close'),
   chooseFolder: kind => ipcRenderer.invoke('choose-folder', kind),
   chooseLogo: () => ipcRenderer.invoke('choose-logo'),
   scanFolder: folder => ipcRenderer.invoke('scan-folder', folder),

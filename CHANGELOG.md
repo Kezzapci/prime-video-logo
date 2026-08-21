@@ -1,3 +1,12 @@
+## v1.7.0 — Control Room arayüzü ve alt overlay
+
+- Masaüstü arayüzü tamamen yeniden tasarlandı; Control Room ekranı, sayfa navigasyonu, command rail, durum kartları ve canlı kompozisyon alanı eklendi.
+- Tüm görünür kontroller uçtan uca bağlandı: klasör seçme/açma, logo seçme, preset konumları, boyut/opaklık slider’ları, başlat/durdur, geçmiş temizleme, sistem onarımı, log açma, güncelleme, pencere küçültme/büyütme/kapatma.
+- Logo artık varsayılan olarak videonun **üzerine**, alt-merkez güvenli bölgeye geniş dikdörtgen overlay olarak yerleşir; altına ayrı panel açılmaz.
+- Logo kaynak oranı korunur, `setsar=1` uygulanır ve FFmpeg overlay ifadesi logo tamamen görünür kalacak şekilde `W-w` / `H-h` sınırlarına oturtulur.
+- Eski üst-sağ varsayılan ayarlar güvenli biçimde alt-merkez yerleşime migrate edilir; kullanıcı yine sürükleyerek veya preset’lerle konumu değiştirebilir.
+- Gerçek worker testinde 720×1280 H.264, AAC 48 kHz / 160 kbps çıktı ve `Masaüstü\\Edilmiş Videolar` akışı doğrulandı.
+
 ## v1.6.1 — Çıktı Klasörü Güvenlik Yaması
 
 - İşlem başlamadan önce `Masaüstü\Edilmiş Videolar` çıktı klasörü otomatik oluşturulur.

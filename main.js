@@ -31,9 +31,9 @@ function ensureDataFiles() {
   if (!fs.existsSync(settingsPath)) fs.writeFileSync(settingsPath, JSON.stringify({
     logoPath: defaultLogoPath,
     outputPath: defaultOutputPath(),
-    logoX: 0.74,
-    logoY: 0.05,
-    logoWidth: 0.22,
+    logoX: 0.11,
+    logoY: 0.68,
+    logoWidth: 0.78,
     opacity: 1,
     fitMode: 'cover',
     margin: 0.04
@@ -41,7 +41,10 @@ function ensureDataFiles() {
   else {
     const saved = getSettings();
     const oldDefault = path.join(app.getPath('desktop'), 'PrimeVideoLogo');
-    if (saved.outputPath === oldDefault) { saved.outputPath = path.join(app.getPath('desktop'), 'Edilmiş Videolar'); writeJson(settingsPath, saved); }
+    let changed = false;
+    if (saved.outputPath === oldDefault) { saved.outputPath = path.join(app.getPath('desktop'), 'Edilmiş Videolar'); changed = true; }
+    if (saved.logoX === 0.74 && saved.logoY === 0.05 && saved.logoWidth === 0.22) { saved.logoX = 0.11; saved.logoY = 0.68; saved.logoWidth = 0.78; changed = true; }
+    if (changed) writeJson(settingsPath, saved);
   }
 }
 
@@ -325,6 +328,9 @@ process.on('unhandledRejection', error => logEvent('error', 'Beklenmeyen asenkro
 
 ipcMain.on('renderer-error', (_event, payload = {}) => logEvent('error', 'Renderer hatası', { message: String(payload.message || 'Bilinmeyen arayüz hatası'), stack: String(payload.stack || '') }));
 ipcMain.handle('get-initial-state', () => ({ settings: getSettings(), history: getHistory(), version: app.getVersion(), health: runHealthCheck() }));
+ipcMain.handle('window-minimize', () => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.minimize(); return true; });
+ipcMain.handle('window-toggle-maximize', () => { if (!mainWindow || mainWindow.isDestroyed()) return false; if (mainWindow.isMaximized()) mainWindow.unmaximize(); else mainWindow.maximize(); return mainWindow.isMaximized(); });
+ipcMain.handle('window-close', () => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close(); return true; });
 ipcMain.handle('get-health', () => runHealthCheck());
 ipcMain.handle('repair-system', () => repairSystem());
 ipcMain.handle('open-logs', () => shell.openPath(logPath));
