@@ -11,6 +11,11 @@ const toFileUrl = value => { if (!value) return ''; const normalized = String(va
 const shortPath = value => value ? (value.length > 52 ? `…${value.slice(-49)}` : value) : '';
 const numeric = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const FORMAT_CONFIG = {
+  '9:16': { key: '9:16', width: 720, height: 1280, label: '9:16', dimensions: '720 × 1280', className: 'canvas-portrait' },
+  '16:9': { key: '16:9', width: 1280, height: 720, label: '16:9', dimensions: '1280 × 720', className: 'canvas-landscape' }
+};
+const getFormat = value => FORMAT_CONFIG[String(value)] || FORMAT_CONFIG['9:16'];
 
 const showToast = message => {
   let toast = document.querySelector('.toast');
@@ -39,12 +44,27 @@ function applySettingsToUI() {
   if ($('outputPathText')) $('outputPathText').textContent = shortPath(outputPath);
   if ($('outputSettingPath')) $('outputSettingPath').textContent = outputPath;
   if ($('logoSettingPath')) $('logoSettingPath').textContent = s.logoPath ? shortPath(s.logoPath) : 'Varsayılan logo';
+  applyFormatToUI();
   if ($('sizeSlider')) $('sizeSlider').value = Math.round(numeric(s.logoWidth, .78) * 100);
   if ($('opacitySlider')) $('opacitySlider').value = Math.round(numeric(s.opacity, 1) * 100);
   if ($('sizeValue')) $('sizeValue').textContent = `${$('sizeSlider')?.value || 22}%`;
   if ($('opacityValue')) $('opacityValue').textContent = `${$('opacitySlider')?.value || 100}%`;
   updateRangeFill($('sizeSlider')); updateRangeFill($('opacitySlider')); positionLogo();
   if (s.logoPath && $('logoOverlay')) { $('logoOverlay').src = toFileUrl(s.logoPath); $('logoOverlay').style.display = 'block'; }
+}
+function applyFormatToUI() {
+  const format = getFormat(state.settings?.outputFormat);
+  state.settings.outputFormat = format.key;
+  document.querySelectorAll('.format-option').forEach(button => button.classList.toggle('active', button.dataset.format === format.key));
+  if ($('topFormat')) $('topFormat').textContent = `${format.dimensions} / ${format.label}`;
+  if ($('canvasFormat')) $('canvasFormat').textContent = format.label;
+  if ($('canvasDimensions')) $('canvasDimensions').textContent = format.dimensions;
+  if ($('statFormat')) $('statFormat').textContent = format.label;
+  if ($('statDimensions')) $('statDimensions').textContent = `${format.dimensions} · Ses korunur`;
+  if ($('composerDimensions')) $('composerDimensions').textContent = `▯ ${format.dimensions}`;
+  const stage = $('previewStage');
+  if (stage) { stage.classList.remove('canvas-portrait', 'canvas-landscape'); stage.classList.add(format.className); }
+  positionLogo();
 }
 function videoRowMarkup(video, index) {
   const cached = state.thumbCache.get(video.path);
@@ -192,6 +212,8 @@ async function startProcessing() {
   if (state.processing) return; if (!state.videos.length) return showToast('Önce bir video klasörü seç'); if (!state.settings.logoPath) return showToast('Önce bir logo seç');
   state.processing = true; if ($('startBtn')) $('startBtn').disabled = true; if ($('stopBtn')) $('stopBtn').disabled = false; setStatus('İşlem sürüyor…', true); updateOverallStats();
   try {
+    applyFormatToUI();
+    await window.primeAPI.saveSettings(state.settings);
     const results = await window.primeAPI.processVideos({ videos: state.videos, settings: state.settings });
     state.history = (await window.primeAPI.getInitialState()).history; renderHistory();
     const list = Array.isArray(results) ? results : [], done = list.filter(item => item?.status === 'done').length, skipped = list.filter(item => item?.status === 'skipped').length, errors = list.filter(item => item?.status === 'error').length;
@@ -223,6 +245,13 @@ function setupDrag() {
 
 on('chooseInput', 'click', chooseInput); on('chooseInputSmall', 'click', chooseInput); on('chooseInputLibrary', 'click', chooseInput);
 on('chooseLogo', 'click', chooseLogo); on('chooseLogoSettings', 'click', chooseLogo); on('chooseOutput', 'click', chooseOutput);
+document.querySelectorAll('.format-option').forEach(button => button.addEventListener('click', async () => {
+  const format = getFormat(button.dataset.format);
+  state.settings.outputFormat = format.key;
+  applyFormatToUI();
+  await window.primeAPI.saveSettings(state.settings);
+  showToast(`Çıktı formatı ${format.label} · ${format.dimensions} olarak ayarlandı`);
+}));
 on('openOutputFolder', 'click', async () => { const folder = state.settings.outputPath || ''; const error = await window.primeAPI.openOutput(folder); showToast(error ? 'Çıktı klasörü açılamadı' : `Çıktı klasörü açıldı: ${shortPath(folder)}`); });
 on('startBtn', 'click', startProcessing); on('stopBtn', 'click', async () => { await window.primeAPI.stopProcessing(); showToast('İşlem güvenli şekilde durduruluyor…'); });
 on('windowMinimize', 'click', () => window.primeAPI.minimizeWindow()); on('windowMaximize', 'click', () => window.primeAPI.toggleMaximize()); on('windowClose', 'click', () => window.primeAPI.closeWindow());

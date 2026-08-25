@@ -36,7 +36,8 @@ function ensureDataFiles() {
     logoWidth: 0.78,
     opacity: 1,
     fitMode: 'cover',
-    margin: 0.04
+    margin: 0.04,
+    outputFormat: '9:16'
   }, null, 2));
   else {
     const saved = getSettings();
@@ -44,6 +45,7 @@ function ensureDataFiles() {
     let changed = false;
     if (saved.outputPath === oldDefault) { saved.outputPath = path.join(app.getPath('desktop'), 'Edilmiş Videolar'); changed = true; }
     if (saved.logoX === 0.74 && saved.logoY === 0.05 && saved.logoWidth === 0.22) { saved.logoX = 0.11; saved.logoY = 0.68; saved.logoWidth = 0.78; changed = true; }
+    if (!['9:16', '16:9'].includes(saved.outputFormat)) { saved.outputFormat = '9:16'; changed = true; }
     if (changed) writeJson(settingsPath, saved);
   }
 }
@@ -400,7 +402,7 @@ ipcMain.handle('scan-folder', async (_event, folderPath) => {
   return fs.readdirSync(folderPath).filter(isVideo).map(name => ({ name, path: path.join(folderPath, name) }));
 });
 ipcMain.handle('save-settings', (_event, settings = {}) => {
-  const normalized = { ...settings, outputPath: normalizeOutputPath(settings.outputPath) };
+  const normalized = { ...settings, outputPath: normalizeOutputPath(settings.outputPath), outputFormat: settings.outputFormat === '16:9' ? '16:9' : '9:16' };
   writeJson(settingsPath, normalized);
   return normalized;
 });
@@ -434,7 +436,8 @@ ipcMain.handle('stop-processing', () => {
 ipcMain.handle('process-videos', async (event, payload) => {
   const { videos, settings } = payload;
   const outputDir = normalizeOutputPath(settings?.outputPath);
-  const jobSettings = { ...settings, outputPath: outputDir };
+  const outputFormat = settings?.outputFormat === '16:9' ? '16:9' : '9:16';
+  const jobSettings = { ...settings, outputPath: outputDir, outputFormat };
   const logoPath = jobSettings.logoPath;
   try {
     fs.mkdirSync(outputDir, { recursive: true });
@@ -446,14 +449,14 @@ ipcMain.handle('process-videos', async (event, payload) => {
   if (!logoPath || !fs.existsSync(logoPath)) { logEvent('warn', 'Logo dosyası bulunamadı', { logoPath }); throw new Error('Logo dosyası bulunamadı.'); }
   if (videoWorker) throw new Error('Başka bir işlem zaten devam ediyor.');
   const history = getHistory();
-  const historyMap = new Map(history.map(item => [item.hash, item]));
+  const historyMap = new Map(history.map(item => [item.historyKey || `${item.hash}:${item.outputFormat || '9:16'}`, item]));
   const workerPath = app.isPackaged ? path.join(process.resourcesPath, 'video-worker.js') : path.join(__dirname, 'video-worker.js');
   return new Promise((resolve, reject) => {
     videoWorker = fork(workerPath, [], { windowsHide: true });
     const cleanup = () => { if (videoWorker) { videoWorker.removeAllListeners(); videoWorker = null; } };
     videoWorker.on('message', message => {
       if (message.type === 'progress') event.sender.send('process-progress', message);
-      if (message.type === 'record') { history.push(message.record); historyMap.set(message.record.hash, message.record); writeJson(historyPath, history); }
+      if (message.type === 'record') { history.push(message.record); historyMap.set(message.record.historyKey || `${message.record.hash}:${message.record.outputFormat || '9:16'}`, message.record); writeJson(historyPath, history); }
       if (message.type === 'finished' || message.type === 'stopped') { cleanup(); resolve(message.results || []); }
       if (message.type === 'fatal-error') { logEvent('error', 'Video worker beklenmeyen hata verdi', { error: message.message }); cleanup(); reject(new Error(message.message)); }
     });

@@ -34,28 +34,40 @@ function friendlyWorkerError(error) {
   if (/permission|denied/i.test(raw)) return 'Dosya erişim izni reddedildi.';
   return raw.length > 160 ? `${raw.slice(0, 157)}…` : raw;
 }
+function getCanvas(settings) {
+  return settings?.outputFormat === '16:9'
+    ? { key: '16:9', width: 1280, height: 720, suffix: '16x9' }
+    : { key: '9:16', width: 720, height: 1280, suffix: '9x16' };
+}
 function buildFilter(settings, mode = 'primary') {
+  const canvas = getCanvas(settings);
   const logoW = Math.max(0.05, Math.min(0.8, Number(settings.logoWidth) || 0.78));
+  const margin = Math.max(0.01, Math.min(0.12, Number(settings.margin) || 0.04));
   const x = Math.max(0, Math.min(1 - logoW, Number(settings.logoX) || 0.11));
-  const y = Math.max(0, Math.min(0.94, Number(settings.logoY) || 0.68));
+  const y = Math.max(0, Math.min(1, Number(settings.logoY) || 0.68));
   const opacity = Math.max(0.05, Math.min(1, Number(settings.opacity) || 1));
-  const logoWidthPx = Math.max(2, Math.round(720 * logoW / 2) * 2);
-  const logoXPx = Math.max(0, Math.round(720 * x));
-  const logoYPx = Math.max(0, Math.round(1280 * y));
-  if (mode === 'fallback') return `[0:v]scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2,setsar=1[base];[1:v]format=rgba,setsar=1,colorchannelmixer=aa=${opacity},scale=w=${logoWidthPx}:h=-1:force_original_aspect_ratio=decrease:flags=lanczos,setsar=1[logo];[base][logo]overlay=x=min(max(0\\,${logoXPx})\\,W-w):y=min(max(0\\,${logoYPx})\\,H-h):repeatlast=1[out]`;
-  return `[0:v]scale=iw*max(720/iw\\,1280/ih):ih*max(720/iw\\,1280/ih),crop=720:1280:(in_w-720)/2:(in_h-1280)/2,setsar=1[base];[1:v]format=rgba,setsar=1,colorchannelmixer=aa=${opacity},scale=w=${logoWidthPx}:h=-1:force_original_aspect_ratio=decrease:flags=lanczos,setsar=1[logo];[base][logo]overlay=x=min(max(0\\,${logoXPx})\\,W-w):y=min(max(0\\,${logoYPx})\\,H-h):eval=frame:repeatlast=1[out]`;
+  const logoWidthPx = Math.max(2, Math.round(canvas.width * logoW / 2) * 2);
+  const logoMaxHeightPx = Math.max(2, Math.floor(canvas.height * (1 - margin * 2) / 2) * 2);
+  const logoXPx = Math.max(0, Math.round(canvas.width * x));
+  const logoYPx = Math.max(0, Math.round(canvas.height * y));
+  const scaleLogo = `format=rgba,setsar=1,colorchannelmixer=aa=${opacity},scale=w=${logoWidthPx}:h=${logoMaxHeightPx}:force_original_aspect_ratio=decrease:flags=lanczos,setsar=1[logo]`;
+  const overlay = `[base][logo]overlay=x=min(max(0\\,${logoXPx})\\,W-w):y=min(max(0\\,${logoYPx})\\,H-h):eval=frame:repeatlast=1[out]`;
+  if (mode === 'fallback') return `[0:v]scale=${canvas.width}:${canvas.height}:force_original_aspect_ratio=decrease,pad=${canvas.width}:${canvas.height}:(ow-iw)/2:(oh-ih)/2,setsar=1[base];[1:v]${scaleLogo};${overlay}`;
+  return `[0:v]scale=iw*max(${canvas.width}/iw\\,${canvas.height}/ih):ih*max(${canvas.width}/iw\\,${canvas.height}/ih),crop=${canvas.width}:${canvas.height}:(in_w-${canvas.width})/2:(in_h-${canvas.height})/2,setsar=1[base];[1:v]${scaleLogo};${overlay}`;
 }
 
 async function processOne(index, total, video, settings, historyHashes, ffmpegPath, outputDir) {
   if (stopRequested) return { stopped: true };
   const hash = await hashFile(video.path);
-  if (historyHashes.has(hash)) {
-    const skipped = { name: video.name, status: 'skipped', progress: 100, message: 'Daha önce işlendi' };
+  const canvas = getCanvas(settings);
+  const historyKey = `${hash}:${canvas.key}`;
+  if (historyHashes.has(historyKey)) {
+    const skipped = { name: video.name, status: 'skipped', progress: 100, message: `${canvas.key} formatı daha önce işlendi` };
     sendProgress(index, total, skipped);
     return skipped;
   }
 
-  const outputPath = path.join(outputDir, `${safeName(path.parse(video.name).name)}_logo_9x16.mp4`);
+  const outputPath = path.join(outputDir, `${safeName(path.parse(video.name).name)}_logo_${canvas.suffix}.mp4`);
   const filter = buildFilter(settings, 'primary');
   const args = ['-y', '-hide_banner', '-i', video.path, '-i', settings.logoPath, '-filter_complex', filter, '-map', '[out]', '-map', '0:a:0?', '-map_metadata', '0', '-c:v', 'libx264', '-preset', 'superfast', '-threads', '0', '-crf', '21', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2', '-af', 'aresample=async=1:first_pts=0', '-shortest', '-max_muxing_queue_size', '2048', '-movflags', '+faststart', outputPath];
   const job = { name: video.name, status: 'processing', progress: 0, message: 'Hazırlanıyor' };
@@ -102,8 +114,8 @@ async function processOne(index, total, video, settings, historyHashes, ffmpegPa
 
   if (stopRequested) return { stopped: true };
   if (!fs.existsSync(outputPath)) throw new Error('FFmpeg tamamlandı ancak çıktı dosyası oluşturulmadı.');
-  const record = { hash, name: video.name, outputPath, processedAt: new Date().toISOString() };
-  historyHashes.add(hash);
+  const record = { hash, historyKey, outputFormat: canvas.key, name: video.name, outputPath, processedAt: new Date().toISOString() };
+  historyHashes.add(historyKey);
   send({ type: 'record', record });
   const done = { name: video.name, status: 'done', progress: 100, message: 'Tamamlandı', outputPath };
   sendProgress(index, total, done);

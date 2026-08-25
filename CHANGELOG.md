@@ -1,3 +1,12 @@
+## v1.8.0 — Çift format çıktı sistemi
+
+- Control Room ve Ayarlar ekranına çalışan 9:16 dikey / 16:9 yatay format seçici eklendi.
+- Seçilen format ön izleme tuvaline, ölçü göstergelerine, logo sürükleme sınırlarına ve FFmpeg render zincirine anında uygulanır.
+- 9:16 çıktılar 720 × 1280, 16:9 çıktılar 1280 × 720 olarak üretilir.
+- Logo her iki tuvalde de kaynak en-boy oranını koruyarak video üstünde güvenli alana sığdırılır.
+- Aynı kaynak video 9:16 ve 16:9 formatlarında ayrı ayrı işlenebilir; SHA-256 geçmiş anahtarı formatı da dikkate alır.
+- AAC ses koruma, gerçek çıktı doğrulaması, Edilmiş Videolar klasörü ve tüm mevcut buton akışları korunur.
+
 ## v1.7.0 — Control Room arayüzü ve alt overlay
 
 - Masaüstü arayüzü tamamen yeniden tasarlandı; Control Room ekranı, sayfa navigasyonu, command rail, durum kartları ve canlı kompozisyon alanı eklendi.
