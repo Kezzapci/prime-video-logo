@@ -8,6 +8,9 @@ const { URL } = require('url');
 
 let mainWindow;
 let videoWorker = null;
+let sourceFolderWatcher = null;
+let sourceFolderWatchPath = '';
+let sourceFolderWatchTimer = null;
 let updateReady = false;
 const appDataDir = path.join(app.getPath('userData'), 'data');
 const historyPath = path.join(appDataDir, 'history.json');
@@ -80,6 +83,46 @@ function normalizeOutputPath(candidate) {
   return path.resolve(value);
 }
 function isVideo(file) { return /\.(mp4|mov|mkv|avi|webm|m4v)$/i.test(file); }
+function sendSourceFolderStatus(data) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('source-folder-status', data);
+}
+function stopSourceFolderWatcher() {
+  if (sourceFolderWatchTimer) { clearTimeout(sourceFolderWatchTimer); sourceFolderWatchTimer = null; }
+  if (sourceFolderWatcher) { try { sourceFolderWatcher.close(); } catch { /* watcher zaten kapanmış olabilir */ } sourceFolderWatcher = null; }
+  sourceFolderWatchPath = '';
+}
+function scheduleSourceFolderRefresh() {
+  if (sourceFolderWatchTimer) clearTimeout(sourceFolderWatchTimer);
+  sourceFolderWatchTimer = setTimeout(() => {
+    sourceFolderWatchTimer = null;
+    sendSourceFolderStatus({ type: 'changed', path: sourceFolderWatchPath });
+  }, 450);
+}
+function startSourceFolderWatcher(folderPath) {
+  stopSourceFolderWatcher();
+  const folder = typeof folderPath === 'string' ? folderPath.trim() : '';
+  if (!folder || !fs.existsSync(folder)) {
+    sendSourceFolderStatus({ type: 'stopped', path: folder, message: 'Kaynak klasörü bulunamadı.' });
+    return { ok: false, path: folder, message: 'Kaynak klasörü bulunamadı.' };
+  }
+  try {
+    sourceFolderWatchPath = path.resolve(folder);
+    sourceFolderWatcher = fs.watch(sourceFolderWatchPath, { persistent: false }, (_eventType, fileName) => {
+      if (!fileName || isVideo(String(fileName))) scheduleSourceFolderRefresh();
+    });
+    sourceFolderWatcher.on('error', error => {
+      logEvent('warn', 'Kaynak klasörü izleyicisi durdu', { folder: sourceFolderWatchPath, error: String(error?.message || error) });
+      sendSourceFolderStatus({ type: 'error', path: sourceFolderWatchPath, message: 'Kaynak klasörü izlenemiyor.' });
+      stopSourceFolderWatcher();
+    });
+    sendSourceFolderStatus({ type: 'watching', path: sourceFolderWatchPath });
+    return { ok: true, path: sourceFolderWatchPath };
+  } catch (error) {
+    logEvent('warn', 'Kaynak klasörü izleyicisi başlatılamadı', { folder, error: String(error?.message || error) });
+    sendSourceFolderStatus({ type: 'error', path: folder, message: 'Kaynak klasörü izlenemiyor.' });
+    return { ok: false, path: folder, message: 'Kaynak klasörü izlenemiyor.' };
+  }
+}
 
 function logEvent(level, message, details = {}) {
   try {
@@ -316,16 +359,19 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false }
   });
   mainWindow.loadFile('index.html');
+  mainWindow.on('closed', () => { stopSourceFolderWatcher(); mainWindow = null; });
 }
 
 app.whenReady().then(() => {
   ensureDataFiles();
   createWindow();
+  const savedSettings = getSettings();
+  if (savedSettings.inputPath) startSourceFolderWatcher(savedSettings.inputPath);
   setupAutoUpdater();
   setTimeout(() => sendHealthStatus(runHealthCheck()), 700);
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
-app.on('before-quit', () => { if (videoWorker) { videoWorker.kill(); videoWorker = null; } });
+app.on('before-quit', () => { stopSourceFolderWatcher(); if (videoWorker) { videoWorker.kill(); videoWorker = null; } });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 process.on('uncaughtException', error => { logEvent('error', 'Beklenmeyen uygulama hatası', { error: String(error?.stack || error) }); sendHealthStatus({ ok: false, failed: 1, summary: 'Uygulama kendini toparlamaya çalışıyor.', checks: [{ id: 'runtime', label: 'Uygulama çalışma durumu', ok: false, detail: 'Hata kaydedildi; sistemi onar düğmesi kullanılabilir.' }] }); });
 process.on('unhandledRejection', error => logEvent('error', 'Beklenmeyen asenkron hata', { error: String(error?.stack || error) }));
@@ -401,10 +447,11 @@ ipcMain.handle('choose-logo', async () => {
 });
 ipcMain.handle('scan-folder', async (_event, folderPath) => {
   if (!folderPath || !fs.existsSync(folderPath)) return [];
-  return fs.readdirSync(folderPath).filter(isVideo).map(name => ({ name, path: path.join(folderPath, name) }));
+  return fs.readdirSync(folderPath).filter(isVideo).sort((left, right) => left.localeCompare(right, 'tr')).map(name => ({ name, path: path.join(folderPath, name) }));
 });
+ipcMain.handle('watch-source-folder', (_event, folderPath) => startSourceFolderWatcher(folderPath));
 ipcMain.handle('save-settings', (_event, settings = {}) => {
-  const normalized = { ...settings, outputPath: normalizeOutputPath(settings.outputPath), outputFormat: settings.outputFormat === '16:9' ? '16:9' : '9:16', logoEnabled: settings.logoEnabled !== false };
+  const normalized = { ...settings, inputPath: typeof settings.inputPath === 'string' ? settings.inputPath : '', outputPath: normalizeOutputPath(settings.outputPath), outputFormat: settings.outputFormat === '16:9' ? '16:9' : '9:16', logoEnabled: settings.logoEnabled !== false };
   writeJson(settingsPath, normalized);
   return normalized;
 });

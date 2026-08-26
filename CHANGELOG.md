@@ -1,4 +1,11 @@
-## v1.8.2 — Logo görünürlük ve serbest konumlandırma yaması
+## v1.8.3 — Otomatik kaynak klasörü izleme
+
+- Seçilen kaynak klasörü uygulama açık olduğu sürece arka planda izlenir; sonradan eklenen, taşınan veya güncellenen desteklenen video dosyaları debounce edilmiş yeni taramayla otomatik listeye alınır.
+- Video olmayan dosya değişiklikleri göz ardı edilir; 500+ videoda sanal liste, thumbnail önbelleği ve mevcut işlem ilerlemesi korunur.
+- Yeni videolar kuyruğa eklenirken SHA-256 geçmişi ve seçili 9:16 / 16:9 format kontrolü korunur; aynı video yeniden işlenmez.
+- İzleyici klasör değişiminde güvenli şekilde kapanır, kaynak klasör değiştirildiğinde eskisi temizlenir ve klasör erişim hataları teknik kayda alınır.
+
+## v1.8.2 — Logo görünürlüğü ve serbest konumlandırma yaması
 
 - Composer ve Sistem ekranına kalıcı `Logo: Açık / Kapalı` düğmesi eklendi.
 - Logo kapalıyken BuildBrk overlay’i hem ön izlemeden hem de FFmpeg çıktısından tamamen kaldırılır; logo dosyası seçmek zorunlu değildir.

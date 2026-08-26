@@ -75,7 +75,7 @@ async function processOne(index, total, video, settings, historyHashes, ffmpegPa
   const canvas = getCanvas(settings);
   const historyKey = `${hash}:${canvas.key}`;
   if (historyHashes.has(historyKey)) {
-    const skipped = { name: video.name, status: 'skipped', progress: 100, message: `${canvas.key} formatı daha önce işlendi` };
+    const skipped = { name: video.name, path: video.path, status: 'skipped', progress: 100, message: `${canvas.key} formatı daha önce işlendi` };
     sendProgress(index, total, skipped);
     return skipped;
   }
@@ -94,7 +94,7 @@ async function processOne(index, total, video, settings, historyHashes, ffmpegPa
   const args = logoEnabled
     ? ['-y', '-hide_banner', '-i', video.path, '-i', settings.logoPath, '-filter_complex', filter, '-map', '[out]', '-map', '0:a:0?', '-map_metadata', '0', '-c:v', 'libx264', '-preset', 'superfast', '-threads', '0', '-crf', '21', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2', '-af', 'aresample=async=1:first_pts=0', '-shortest', '-max_muxing_queue_size', '2048', '-movflags', '+faststart', outputPath]
     : ['-y', '-hide_banner', '-i', video.path, '-vf', filter, '-map', '0:v:0', '-map', '0:a:0?', '-map_metadata', '0', '-c:v', 'libx264', '-preset', 'superfast', '-threads', '0', '-crf', '21', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2', '-af', 'aresample=async=1:first_pts=0', '-shortest', '-max_muxing_queue_size', '2048', '-movflags', '+faststart', outputPath];
-  const job = { name: video.name, status: 'processing', progress: 0, message: 'Hazırlanıyor' };
+  const job = { name: video.name, path: video.path, status: 'processing', progress: 0, message: 'Hazırlanıyor' };
   sendProgress(index, total, job);
 
   async function runFfmpeg(currentArgs, attempt = 1) {
@@ -110,7 +110,7 @@ async function processOne(index, total, video, settings, historyHashes, ffmpegPa
       const t = /time=(\d+):(\d+):(\d+(?:\.\d+)?)/.exec(text);
       if (t && duration) {
         const current = Number(t[1]) * 3600 + Number(t[2]) * 60 + Number(t[3]);
-        sendProgress(index, total, { name: video.name, status: 'processing', progress: Math.min(99, Math.round((current / duration) * 100)), message: 'İşleniyor' });
+        sendProgress(index, total, { name: video.name, path: video.path, status: 'processing', progress: Math.min(99, Math.round((current / duration) * 100)), message: 'İşleniyor' });
       }
     });
     currentProcess.on('error', reject);
@@ -126,7 +126,7 @@ async function processOne(index, total, video, settings, historyHashes, ffmpegPa
     await runFfmpeg(args);
   } catch (primaryError) {
     if (fs.existsSync(outputPath)) try { fs.unlinkSync(outputPath); } catch { /* yarım çıktı temizlenebilir */ }
-    sendProgress(index, total, { name: video.name, status: 'processing', progress: 0, message: 'Akıllı kurtarma filtresi deneniyor…' });
+    sendProgress(index, total, { name: video.name, path: video.path, status: 'processing', progress: 0, message: 'Akıllı kurtarma filtresi deneniyor…' });
     try {
       const fallbackArgs = args.slice();
       fallbackArgs[fallbackArgs.indexOf(filter)] = logoEnabled ? buildFilter(settings, 'fallback') : buildBaseFilter(settings, 'fallback');
@@ -141,7 +141,7 @@ async function processOne(index, total, video, settings, historyHashes, ffmpegPa
   const record = { hash, historyKey, outputFormat: canvas.key, name: video.name, outputPath, processedAt: new Date().toISOString() };
   historyHashes.add(historyKey);
   send({ type: 'record', record });
-  const done = { name: video.name, status: 'done', progress: 100, message: 'Tamamlandı', outputPath };
+  const done = { name: video.name, path: video.path, status: 'done', progress: 100, message: 'Tamamlandı', outputPath };
   sendProgress(index, total, done);
   return done;
 }
@@ -159,7 +159,7 @@ async function processBatch(payload) {
       if (result?.stopped) break;
     } catch (error) {
       const message = friendlyWorkerError(error);
-      sendProgress(index, videos.length, { name: videos[index].name, status: 'error', progress: 0, message });
+      sendProgress(index, videos.length, { name: videos[index].name, path: videos[index].path, status: 'error', progress: 0, message });
       results.push({ name: videos[index].name, status: 'error', message });
     }
   }

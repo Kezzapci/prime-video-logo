@@ -1,6 +1,6 @@
 const state = {
   settings: {}, history: [], videos: [], processing: false, activeVideo: null, drag: null,
-  health: null, inputPath: '', thumbCache: new Map(), thumbLoading: new Set(), thumbQueue: [],
+  health: null, inputPath: '', sourceWatchStatus: 'idle', thumbCache: new Map(), thumbLoading: new Set(), thumbQueue: [],
   thumbInFlight: 0, queueProgress: new Map()
 };
 
@@ -57,6 +57,7 @@ function applyLogoState() {
 function applySettingsToUI() {
   const s = state.settings || {};
   s.logoEnabled = s.logoEnabled !== false;
+  state.inputPath = s.inputPath || state.inputPath || '';
   if ($('inputPath')) $('inputPath').value = state.inputPath || '';
   const outputPath = s.outputPath || 'Masaüstü\\Edilmiş Videolar';
   if ($('outputPathText')) $('outputPathText').textContent = shortPath(outputPath);
@@ -122,14 +123,14 @@ function renderQueueWindow() {
   const rows = state.videos.slice(win.start, win.end).map((video, offset) => queueRowMarkup(video, win.start + offset)).join('');
   container.innerHTML = `<div class="virtual-spacer" style="height:${win.top}px"></div>${rows}<div class="virtual-spacer" style="height:${win.bottom}px"></div>`;
 }
-function renderVideoList() {
+function renderVideoList(resetQueue = true, refreshThumbs = false) {
   const count = state.videos.length;
   if ($('videoCount')) $('videoCount').textContent = `${count} video`;
   if ($('statVideos')) $('statVideos').textContent = count.toLocaleString('tr-TR');
-  if ($('scanText')) $('scanText').textContent = count ? 'İşleme hazır · Sanal kuyruk' : 'Video bulunamadı';
+  if ($('scanText')) $('scanText').textContent = state.sourceWatchStatus === 'watching' ? `${count} video · klasör izleniyor` : state.sourceWatchStatus === 'scanning' ? 'Klasör taranıyor…' : (count ? 'İşleme hazır · Sanal kuyruk' : 'Video bulunamadı');
   if ($('queueCount')) $('queueCount').textContent = count.toLocaleString('tr-TR');
-  state.thumbCache.clear(); state.thumbLoading.clear(); state.thumbQueue.length = 0; state.queueProgress.clear();
-  if ($('videoList')) $('videoList').scrollTop = 0; if ($('queueList')) $('queueList').scrollTop = 0;
+  if (refreshThumbs) { state.thumbCache.clear(); state.thumbLoading.clear(); state.thumbQueue.length = 0; }
+  if (resetQueue) { state.queueProgress.clear(); if ($('videoList')) $('videoList').scrollTop = 0; if ($('queueList')) $('queueList').scrollTop = 0; }
   renderVideoWindow(); renderQueueWindow(); updateOverallStats();
 }
 function loadThumb(video, index) {
@@ -170,15 +171,48 @@ function positionLogo() {
   if ($('logoPositionValue')) $('logoPositionValue').textContent = `${Math.round(x * 100)}%, ${Math.round(y * 100)}%`;
 }
 function updateSetting(key, value) { state.settings[key] = value; return window.primeAPI.saveSettings(state.settings); }
+async function scanInputFolder({ resetQueue = false, silent = false } = {}) {
+  const folder = state.inputPath || state.settings?.inputPath;
+  if (!folder) return [];
+  const previousVideos = state.videos.slice();
+  const previousProgress = new Map(previousVideos.map((video, index) => [video.path, state.queueProgress.get(index)]));
+  const previousPaths = new Set(previousVideos.map(video => video.path));
+  state.sourceWatchStatus = 'scanning'; renderVideoList(false);
+  try {
+    const videos = await window.primeAPI.scanFolder(folder);
+    state.videos = Array.isArray(videos) ? videos : [];
+    state.queueProgress.clear();
+    state.videos.forEach((video, index) => { const progress = previousProgress.get(video.path); if (progress) state.queueProgress.set(index, progress); });
+    if (state.activeVideo) state.activeVideo = state.videos.find(video => video.path === state.activeVideo.path) || null;
+    state.sourceWatchStatus = 'watching'; renderVideoList(resetQueue, resetQueue);
+    const newCount = state.videos.filter(video => !previousPaths.has(video.path)).length;
+    if (!silent && newCount > 0) showToast(`${newCount.toLocaleString('tr-TR')} yeni video bulundu ve kuyruğa eklendi`);
+    return state.videos;
+  } catch (error) {
+    state.sourceWatchStatus = 'error'; renderVideoList(false);
+    window.primeAPI.reportError({ message: 'Klasör taranamadı', stack: error?.stack });
+    if (!silent) { setStatus('Onarım gerekli'); showToast('Yeni videolar taranamadı. Teknik kayıt tutuldu.'); }
+    return [];
+  }
+}
 async function chooseInput() {
   const folder = await window.primeAPI.chooseFolder('input'); if (!folder) return;
-  state.inputPath = folder; if ($('inputPath')) $('inputPath').value = folder; setStatus('Klasör taranıyor…', true);
+  state.inputPath = folder; state.settings.inputPath = folder; if ($('inputPath')) $('inputPath').value = folder; setStatus('Klasör taranıyor…', true);
   try {
-    state.videos = await window.primeAPI.scanFolder(folder); renderVideoList(); setStatus('Hazır');
-    showToast(state.videos.length ? `${state.videos.length.toLocaleString('tr-TR')} video akıllı kuyruğa alındı` : 'Bu klasörde desteklenen video bulunamadı');
+    await window.primeAPI.saveSettings(state.settings);
+    const watch = await window.primeAPI.watchSourceFolder(folder);
+    if (!watch?.ok) showToast(watch?.message || 'Klasör izlenemedi');
+    await scanInputFolder({ resetQueue: true, silent: true });
+    setStatus('Hazır');
+    showToast(state.videos.length ? `${state.videos.length.toLocaleString('tr-TR')} video akıllı kuyruğa alındı · yeni videolar otomatik taranır` : 'Bu klasörde desteklenen video bulunamadı');
   } catch (error) {
-    window.primeAPI.reportError({ message: 'Klasör taranamadı', stack: error?.stack }); setStatus('Onarım gerekli'); showToast('Klasör taranamadı. Sistem onarımı deneniyor.'); await autoRepair(true);
+    window.primeAPI.reportError({ message: 'Klasör seçilemedi', stack: error?.stack }); setStatus('Onarım gerekli'); showToast('Klasör taranamadı. Teknik kayıt tutuldu.');
   }
+}
+function handleSourceFolderStatus(data = {}) {
+  if (data.type === 'watching') { state.sourceWatchStatus = 'watching'; renderVideoList(false); return; }
+  if (data.type === 'changed') { if (data.path === state.inputPath || !state.inputPath) scanInputFolder({ resetQueue: false }); return; }
+  if (data.type === 'error' || data.type === 'stopped') { state.sourceWatchStatus = 'error'; renderVideoList(false); showToast(data.message || 'Kaynak klasörü izlenemiyor.'); }
 }
 async function chooseOutput() {
   const folder = await window.primeAPI.chooseFolder('output'); if (!folder) return;
@@ -301,13 +335,14 @@ on('openReleasePage', 'click', async () => { await window.primeAPI.openReleasePa
 on('checkUpdateBtn', 'click', async () => { if ($('checkUpdateBtn')) $('checkUpdateBtn').disabled = true; const result = await window.primeAPI.checkForUpdates(); if (result?.status === 'dev') { if ($('checkUpdateBtn')) $('checkUpdateBtn').disabled = false; showToast('Otomatik kontrol kurulu EXE sürümünde çalışır.'); } });
 on('updateActionBtn', 'click', async () => { const action = $('updateActionBtn')?.dataset.action; if (action === 'download') await window.primeAPI.downloadUpdate(); if (action === 'install') await window.primeAPI.installUpdate(); });
 on('closeUpdateBanner', 'click', () => $('updateBanner')?.classList.add('hidden')); on('repairBtn', 'click', () => autoRepair(false)); on('openLogsBtn', 'click', () => window.primeAPI.openLogs());
-window.primeAPI.onProgress(updateQueue); window.primeAPI.onUpdateStatus(handleUpdateStatus); window.primeAPI.onHealthStatus(renderHealth);
+window.primeAPI.onProgress(updateQueue); window.primeAPI.onSourceFolderStatus(handleSourceFolderStatus); window.primeAPI.onUpdateStatus(handleUpdateStatus); window.primeAPI.onHealthStatus(renderHealth);
 window.addEventListener('error', event => { window.primeAPI.reportError({ message: event.message, stack: event.error?.stack }); showToast('Arayüz kendini toparlamaya çalışıyor.'); });
 window.addEventListener('unhandledrejection', event => { window.primeAPI.reportError({ message: String(event.reason), stack: event.reason?.stack }); showToast('Beklenmeyen işlem hatası kaydedildi.'); });
 (async () => {
   try {
     const initial = await window.primeAPI.getInitialState(); state.settings = initial.settings || {}; state.history = initial.history || []; state.health = initial.health || null;
     applySettingsToUI(); renderHistory(); renderHealth(state.health); setupDrag();
+    if (state.inputPath) { await window.primeAPI.watchSourceFolder(state.inputPath); await scanInputFolder({ resetQueue: true, silent: true }); }
     const version = initial.version || await window.primeAPI.getAppVersion(); if ($('versionText')) $('versionText').textContent = `Mevcut sürüm: v${version} · Yeni sürümler otomatik kontrol edilir.`;
     if (state.health && !state.health.ok) setTimeout(() => autoRepair(true), 900);
   } catch (error) { window.primeAPI.reportError({ message: 'Başlangıç durumu yüklenemedi', stack: error?.stack }); showToast('Uygulama başlatılırken sorun oluştu; sistem onarılıyor.'); setTimeout(() => autoRepair(true), 800); }
