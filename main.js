@@ -37,6 +37,7 @@ function ensureDataFiles() {
     opacity: 1,
     fitMode: 'cover',
     margin: 0.04,
+    logoEnabled: true,
     outputFormat: '9:16'
   }, null, 2));
   else {
@@ -46,6 +47,7 @@ function ensureDataFiles() {
     if (saved.outputPath === oldDefault) { saved.outputPath = path.join(app.getPath('desktop'), 'Edilmiş Videolar'); changed = true; }
     if (saved.logoX === 0.74 && saved.logoY === 0.05 && saved.logoWidth === 0.22) { saved.logoX = 0.11; saved.logoY = 0.68; saved.logoWidth = 0.78; changed = true; }
     if (!['9:16', '16:9'].includes(saved.outputFormat)) { saved.outputFormat = '9:16'; changed = true; }
+    if (typeof saved.logoEnabled !== 'boolean') { saved.logoEnabled = true; changed = true; }
     if (changed) writeJson(settingsPath, saved);
   }
 }
@@ -112,7 +114,7 @@ function runHealthCheck() {
   try { execFileSync(ffmpegPath, ['-version'], { stdio: 'ignore', windowsHide: true }); ffmpegReady = true; } catch { ffmpegReady = false; }
   const checks = [
     { id: 'data', label: 'Uygulama verileri', ok: fs.existsSync(appDataDir) && fs.existsSync(settingsPath) && fs.existsSync(historyPath), detail: 'Ayarlar ve işlem geçmişi erişilebilir.' },
-    { id: 'logo', label: 'Logo dosyası', ok: !!settings.logoPath && fs.existsSync(settings.logoPath), detail: fs.existsSync(settings.logoPath || '') ? 'Seçili logo hazır.' : 'Varsayılan logo kullanılabilir.' },
+    { id: 'logo', label: 'Logo dosyası', ok: settings.logoEnabled === false || (!!settings.logoPath && fs.existsSync(settings.logoPath)), detail: settings.logoEnabled === false ? 'Logo overlay kapalı; dosya gerekmiyor.' : (fs.existsSync(settings.logoPath || '') ? 'Seçili logo hazır.' : 'Varsayılan logo kullanılabilir.') },
     { id: 'output', label: 'Çıktı klasörü', ok: !!settings.outputPath, detail: settings.outputPath || 'Masaüstü\\Edilmiş Videolar' },
     { id: 'worker', label: 'Video motoru', ok: fs.existsSync(app.isPackaged ? path.join(process.resourcesPath, 'video-worker.js') : path.join(__dirname, 'video-worker.js')), detail: 'Arka plan worker hazır.' },
     { id: 'ffmpeg', label: 'FFmpeg', ok: ffmpegReady, detail: ffmpegReady ? 'Video motoru hazır.' : 'FFmpeg bulunamadı.' }
@@ -125,7 +127,7 @@ function repairSystem() {
   const settings = getSettings();
   const defaultLogoPath = app.isPackaged ? path.join(process.resourcesPath, 'assets', 'logo.png') : path.join(__dirname, 'assets', 'logo.png');
   settings.outputPath = normalizeOutputPath(settings.outputPath);
-  if (!settings.logoPath || !fs.existsSync(settings.logoPath)) settings.logoPath = defaultLogoPath;
+  if (settings.logoEnabled !== false && (!settings.logoPath || !fs.existsSync(settings.logoPath))) settings.logoPath = defaultLogoPath;
   fs.mkdirSync(settings.outputPath, { recursive: true });
   writeJson(settingsPath, settings);
   const previewDir = path.join(appDataDir, 'previews');
@@ -402,7 +404,7 @@ ipcMain.handle('scan-folder', async (_event, folderPath) => {
   return fs.readdirSync(folderPath).filter(isVideo).map(name => ({ name, path: path.join(folderPath, name) }));
 });
 ipcMain.handle('save-settings', (_event, settings = {}) => {
-  const normalized = { ...settings, outputPath: normalizeOutputPath(settings.outputPath), outputFormat: settings.outputFormat === '16:9' ? '16:9' : '9:16' };
+  const normalized = { ...settings, outputPath: normalizeOutputPath(settings.outputPath), outputFormat: settings.outputFormat === '16:9' ? '16:9' : '9:16', logoEnabled: settings.logoEnabled !== false };
   writeJson(settingsPath, normalized);
   return normalized;
 });
@@ -446,7 +448,7 @@ ipcMain.handle('process-videos', async (event, payload) => {
     logEvent('error', 'Çıktı klasörü hazırlanamadı', { outputDir, error: String(error?.message || error) });
     throw new Error(`Çıktı klasörüne yazılamıyor: ${outputDir}`);
   }
-  if (!logoPath || !fs.existsSync(logoPath)) { logEvent('warn', 'Logo dosyası bulunamadı', { logoPath }); throw new Error('Logo dosyası bulunamadı.'); }
+  if (jobSettings.logoEnabled !== false && (!logoPath || !fs.existsSync(logoPath))) { logEvent('warn', 'Logo dosyası bulunamadı', { logoPath }); throw new Error('Logo dosyası bulunamadı.'); }
   if (videoWorker) throw new Error('Başka bir işlem zaten devam ediyor.');
   const history = getHistory();
   const historyMap = new Map(history.map(item => [item.historyKey || `${item.hash}:${item.outputFormat || '9:16'}`, item]));

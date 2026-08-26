@@ -1,3 +1,10 @@
+## v1.8.2 — Logo görünürlük ve serbest konumlandırma yaması
+
+- Composer ve Sistem ekranına kalıcı `Logo: Açık / Kapalı` düğmesi eklendi.
+- Logo kapalıyken BuildBrk overlay’i hem ön izlemeden hem de FFmpeg çıktısından tamamen kaldırılır; logo dosyası seçmek zorunlu değildir.
+- Logo açıkken kaynak en-boy oranı korunur; sürükleme x/y koordinatları kenar kilidine zorlanmadan serbestçe ayarlanabilir.
+- 9:16 ve 16:9 tuval boyutları, AAC 48 kHz ses koruması, SHA-256 geçmişi, çıktı klasörleri ve otomatik güncelleme akışı korunur.
+
 ## v1.8.1 — Temiz çıktı başlıkları
 
 - Çıktı dosya adlarından `_logo_9x16` ve `_logo_16x9` ekleri kaldırıldı; başlıkta yalnızca orijinal video adı kullanılır.

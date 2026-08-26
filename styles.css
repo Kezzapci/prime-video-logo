@@ -9,4 +9,19 @@
 /* v1.8.0 dual canvas selector */
 .compact-format-switch{align-self:flex-end;gap:4px;flex-wrap:nowrap}.compact-format-switch .format-option{min-width:72px;padding:7px 9px;border-radius:7px}.compact-format-switch .format-option b{font-size:10px}.compact-format-switch .format-option small{font-size:6px}.compact-format-switch .format-option.active{box-shadow:0 0 0 1px rgba(83,213,255,.12),0 7px 18px rgba(10,115,163,.14)}
 @media (max-width:900px){.head-actions{align-items:flex-start;flex-wrap:wrap}.compact-format-switch{order:3;width:100%;justify-content:flex-start}.compact-format-switch .format-option{flex:0 1 84px}}
-@media (max-width:680px){.compact-format-switch .format-option{flex:1;min-width:0}}
+@media(max-width:680px){.compact-format-switch .format-option{flex:1;min-width:0}}
+
+/* v1.8.2 logo visibility and free positioning */
+.logo-toggle{display:inline-flex;align-items:center;gap:7px;min-height:30px;padding:6px 10px;border:1px solid rgba(112,226,152,.38);border-radius:999px;background:rgba(46,126,87,.18);color:#b9f3c9;font:inherit;font-size:10px;letter-spacing:.25px;cursor:pointer;white-space:nowrap;transition:.2s var(--ease)}
+.logo-toggle:hover{border-color:rgba(112,226,152,.72);background:rgba(46,126,87,.3);transform:translateY(-1px)}
+.logo-toggle .toggle-dot{width:8px;height:8px;border-radius:50%;background:#70e298;box-shadow:0 0 10px rgba(112,226,152,.8)}
+.logo-toggle b{color:#effff3;font-weight:700}
+.logo-toggle.is-off{border-color:rgba(224,86,86,.5);background:rgba(137,48,48,.2);color:#f2b0b0}
+.logo-toggle.is-off .toggle-dot{background:#e05656;box-shadow:0 0 10px rgba(224,86,86,.72)}
+.logo-toggle.is-off b{color:#ffd0d0}
+.composer-meta .logo-toggle{margin-left:auto}
+.setting-substate{color:#70e298!important;font-size:10px!important}
+.preset:disabled,.slider-grid input:disabled{opacity:.38;cursor:not-allowed;filter:saturate(.35)}
+.preset.is-disabled{pointer-events:none}
+.drag-note small{color:#70e298;letter-spacing:.45px}
+@media(max-width:680px){.composer-meta{flex-wrap:wrap}.composer-meta .logo-toggle{margin-left:0}.setting-actions{flex-wrap:wrap}}

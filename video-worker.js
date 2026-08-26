@@ -45,21 +45,28 @@ function getCanvas(settings) {
     ? { key: '16:9', width: 1280, height: 720, suffix: '16x9' }
     : { key: '9:16', width: 720, height: 1280, suffix: '9x16' };
 }
+function finiteNumber(value, fallback) {
+  return Number.isFinite(Number(value)) ? Number(value) : fallback;
+}
+function buildBaseFilter(settings, mode = 'primary') {
+  const canvas = getCanvas(settings);
+  if (mode === 'fallback') return `scale=${canvas.width}:${canvas.height}:force_original_aspect_ratio=decrease,pad=${canvas.width}:${canvas.height}:(ow-iw)/2:(oh-ih)/2,setsar=1`;
+  return `scale=iw*max(${canvas.width}/iw\\,${canvas.height}/ih):ih*max(${canvas.width}/iw\\,${canvas.height}/ih),crop=${canvas.width}:${canvas.height}:(in_w-${canvas.width})/2:(in_h-${canvas.height})/2,setsar=1`;
+}
 function buildFilter(settings, mode = 'primary') {
   const canvas = getCanvas(settings);
-  const logoW = Math.max(0.05, Math.min(0.8, Number(settings.logoWidth) || 0.78));
-  const margin = Math.max(0.01, Math.min(0.12, Number(settings.margin) || 0.04));
-  const x = Math.max(0, Math.min(1 - logoW, Number(settings.logoX) || 0.11));
-  const y = Math.max(0, Math.min(1, Number(settings.logoY) || 0.68));
-  const opacity = Math.max(0.05, Math.min(1, Number(settings.opacity) || 1));
+  const logoW = Math.max(0.05, Math.min(0.8, finiteNumber(settings.logoWidth, 0.78)));
+  const margin = Math.max(0.01, Math.min(0.12, finiteNumber(settings.margin, 0.04)));
+  const x = finiteNumber(settings.logoX, 0.11);
+  const y = finiteNumber(settings.logoY, 0.68);
+  const opacity = Math.max(0.05, Math.min(1, finiteNumber(settings.opacity, 1)));
   const logoWidthPx = Math.max(2, Math.round(canvas.width * logoW / 2) * 2);
   const logoMaxHeightPx = Math.max(2, Math.floor(canvas.height * (1 - margin * 2) / 2) * 2);
-  const logoXPx = Math.max(0, Math.round(canvas.width * x));
-  const logoYPx = Math.max(0, Math.round(canvas.height * y));
+  const logoXPx = Math.round(canvas.width * x);
+  const logoYPx = Math.round(canvas.height * y);
   const scaleLogo = `format=rgba,setsar=1,colorchannelmixer=aa=${opacity},scale=w=${logoWidthPx}:h=${logoMaxHeightPx}:force_original_aspect_ratio=decrease:flags=lanczos,setsar=1[logo]`;
-  const overlay = `[base][logo]overlay=x=min(max(0\\,${logoXPx})\\,W-w):y=min(max(0\\,${logoYPx})\\,H-h):eval=frame:repeatlast=1[out]`;
-  if (mode === 'fallback') return `[0:v]scale=${canvas.width}:${canvas.height}:force_original_aspect_ratio=decrease,pad=${canvas.width}:${canvas.height}:(ow-iw)/2:(oh-ih)/2,setsar=1[base];[1:v]${scaleLogo};${overlay}`;
-  return `[0:v]scale=iw*max(${canvas.width}/iw\\,${canvas.height}/ih):ih*max(${canvas.width}/iw\\,${canvas.height}/ih),crop=${canvas.width}:${canvas.height}:(in_w-${canvas.width})/2:(in_h-${canvas.height})/2,setsar=1[base];[1:v]${scaleLogo};${overlay}`;
+  const overlay = `[base][logo]overlay=x=${logoXPx}:y=${logoYPx}:eval=frame:repeatlast=1[out]`;
+  return `[0:v]${buildBaseFilter(settings, mode)}[base];[1:v]${scaleLogo};${overlay}`;
 }
 
 async function processOne(index, total, video, settings, historyHashes, ffmpegPath, outputDir) {
@@ -82,8 +89,11 @@ async function processOne(index, total, video, settings, historyHashes, ffmpegPa
     outputPath = path.join(formatOutputDir, `${originalStem} (${collisionIndex}).mp4`);
     collisionIndex += 1;
   }
-  const filter = buildFilter(settings, 'primary');
-  const args = ['-y', '-hide_banner', '-i', video.path, '-i', settings.logoPath, '-filter_complex', filter, '-map', '[out]', '-map', '0:a:0?', '-map_metadata', '0', '-c:v', 'libx264', '-preset', 'superfast', '-threads', '0', '-crf', '21', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2', '-af', 'aresample=async=1:first_pts=0', '-shortest', '-max_muxing_queue_size', '2048', '-movflags', '+faststart', outputPath];
+  const logoEnabled = settings.logoEnabled !== false;
+  const filter = logoEnabled ? buildFilter(settings, 'primary') : buildBaseFilter(settings, 'primary');
+  const args = logoEnabled
+    ? ['-y', '-hide_banner', '-i', video.path, '-i', settings.logoPath, '-filter_complex', filter, '-map', '[out]', '-map', '0:a:0?', '-map_metadata', '0', '-c:v', 'libx264', '-preset', 'superfast', '-threads', '0', '-crf', '21', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2', '-af', 'aresample=async=1:first_pts=0', '-shortest', '-max_muxing_queue_size', '2048', '-movflags', '+faststart', outputPath]
+    : ['-y', '-hide_banner', '-i', video.path, '-vf', filter, '-map', '0:v:0', '-map', '0:a:0?', '-map_metadata', '0', '-c:v', 'libx264', '-preset', 'superfast', '-threads', '0', '-crf', '21', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2', '-af', 'aresample=async=1:first_pts=0', '-shortest', '-max_muxing_queue_size', '2048', '-movflags', '+faststart', outputPath];
   const job = { name: video.name, status: 'processing', progress: 0, message: 'Hazırlanıyor' };
   sendProgress(index, total, job);
 
@@ -119,7 +129,7 @@ async function processOne(index, total, video, settings, historyHashes, ffmpegPa
     sendProgress(index, total, { name: video.name, status: 'processing', progress: 0, message: 'Akıllı kurtarma filtresi deneniyor…' });
     try {
       const fallbackArgs = args.slice();
-      fallbackArgs[fallbackArgs.indexOf(filter)] = buildFilter(settings, 'fallback');
+      fallbackArgs[fallbackArgs.indexOf(filter)] = logoEnabled ? buildFilter(settings, 'fallback') : buildBaseFilter(settings, 'fallback');
       await runFfmpeg(fallbackArgs, 2);
     } catch (fallbackError) {
       throw new Error(friendlyWorkerError(fallbackError || primaryError));

@@ -37,8 +37,26 @@ function updateRangeFill(input) {
   const pct = ((value - min) / Math.max(1, max - min)) * 100;
   input.style.background = `linear-gradient(90deg,#188dd0 0 ${pct}%,#203846 ${pct}% 100%)`;
 }
+function logoIsEnabled() {
+  return state.settings?.logoEnabled !== false;
+}
+function applyLogoState() {
+  const enabled = logoIsEnabled();
+  const logo = $('logoOverlay');
+  if (logo) logo.style.display = enabled && state.settings?.logoPath ? 'block' : 'none';
+  document.querySelectorAll('.logo-toggle').forEach(toggle => {
+    toggle.classList.toggle('is-off', !enabled);
+    toggle.setAttribute('aria-pressed', String(enabled));
+    const label = toggle.querySelector('[data-toggle-label]');
+    if (label) label.textContent = enabled ? 'Açık' : 'Kapalı';
+  });
+  document.querySelectorAll('.preset').forEach(button => { button.disabled = !enabled; button.classList.toggle('is-disabled', !enabled); });
+  ['sizeSlider', 'opacitySlider'].forEach(id => { if ($(id)) $(id).disabled = !enabled; });
+  if ($('logoStateText')) $('logoStateText').textContent = enabled ? 'BuildBrk overlay etkin' : 'BuildBrk overlay kapalı';
+}
 function applySettingsToUI() {
   const s = state.settings || {};
+  s.logoEnabled = s.logoEnabled !== false;
   if ($('inputPath')) $('inputPath').value = state.inputPath || '';
   const outputPath = s.outputPath || 'Masaüstü\\Edilmiş Videolar';
   if ($('outputPathText')) $('outputPathText').textContent = shortPath(outputPath);
@@ -50,7 +68,8 @@ function applySettingsToUI() {
   if ($('sizeValue')) $('sizeValue').textContent = `${$('sizeSlider')?.value || 22}%`;
   if ($('opacityValue')) $('opacityValue').textContent = `${$('opacitySlider')?.value || 100}%`;
   updateRangeFill($('sizeSlider')); updateRangeFill($('opacitySlider')); positionLogo();
-  if (s.logoPath && $('logoOverlay')) { $('logoOverlay').src = toFileUrl(s.logoPath); $('logoOverlay').style.display = 'block'; }
+  if (s.logoPath && $('logoOverlay')) $('logoOverlay').src = toFileUrl(s.logoPath);
+  applyLogoState();
 }
 function applyFormatToUI() {
   const format = getFormat(state.settings?.outputFormat);
@@ -134,8 +153,8 @@ function pumpThumbs() {
 function setPreview(video, framePath) {
   state.activeVideo = video;
   if (framePath && $('previewImage')) { $('previewImage').src = toFileUrl(framePath); $('previewImage').style.display = 'block'; if ($('previewPlaceholder')) $('previewPlaceholder').style.display = 'none'; }
-  if (state.settings.logoPath && $('logoOverlay')) { $('logoOverlay').src = toFileUrl(state.settings.logoPath); $('logoOverlay').style.display = 'block'; }
-  positionLogo();
+  if (state.settings.logoPath && $('logoOverlay')) $('logoOverlay').src = toFileUrl(state.settings.logoPath);
+  applyLogoState(); positionLogo();
 }
 function logoHeightFraction(width) {
   const logo = $('logoOverlay'), stage = $('previewStage');
@@ -146,7 +165,7 @@ function logoHeightFraction(width) {
 function positionLogo() {
   const s = state.settings || {}, logo = $('logoOverlay'); if (!logo) return;
   const width = clamp(numeric(s.logoWidth, .78), .05, .8), height = logoHeightFraction(width);
-  const x = clamp(numeric(s.logoX, .11), 0, 1 - width), y = clamp(numeric(s.logoY, .68), 0, 1 - height);
+  const x = numeric(s.logoX, .11), y = numeric(s.logoY, .68);
   logo.style.left = `${x * 100}%`; logo.style.top = `${y * 100}%`; logo.style.width = `${width * 100}%`; logo.style.height = 'auto'; logo.style.opacity = clamp(numeric(s.opacity, 1), .05, 1); logo.style.transform = 'translate3d(0,0,0)';
   if ($('logoPositionValue')) $('logoPositionValue').textContent = `${Math.round(x * 100)}%, ${Math.round(y * 100)}%`;
 }
@@ -167,7 +186,22 @@ async function chooseOutput() {
 }
 async function chooseLogo() {
   const logo = await window.primeAPI.chooseLogo(); if (!logo) return;
-  await updateSetting('logoPath', logo); applySettingsToUI(); if ($('logoOverlay')) $('logoOverlay').style.display = 'block'; showToast('Logo güncellendi · Video üstünde istediğin yere taşı');
+  await updateSetting('logoPath', logo); applySettingsToUI(); showToast('Logo güncellendi · Video üstünde istediğin yere taşı');
+}
+async function toggleLogo() {
+  const previous = logoIsEnabled();
+  state.settings.logoEnabled = !previous;
+  applyLogoState();
+  try {
+    state.settings = await window.primeAPI.saveSettings(state.settings);
+    applySettingsToUI();
+    showToast(state.settings.logoEnabled ? 'Logo overlay açıldı' : 'Logo overlay kapatıldı');
+  } catch (error) {
+    state.settings.logoEnabled = previous;
+    applyLogoState();
+    window.primeAPI.reportError({ message: 'Logo görünürlüğü kaydedilemedi', stack: error?.stack });
+    showToast('Logo ayarı kaydedilemedi.');
+  }
 }
 function updateOverallStats() {
   const total = state.videos.length; if (!total) { if ($('statDone')) $('statDone').textContent = '0'; return; }
@@ -209,7 +243,7 @@ async function autoRepair(silent = false) {
   finally { if (button) { button.disabled = false; button.innerHTML = '<span>✦</span> Sistemi tara ve onar'; } }
 }
 async function startProcessing() {
-  if (state.processing) return; if (!state.videos.length) return showToast('Önce bir video klasörü seç'); if (!state.settings.logoPath) return showToast('Önce bir logo seç');
+  if (state.processing) return; if (!state.videos.length) return showToast('Önce bir video klasörü seç'); if (logoIsEnabled() && !state.settings.logoPath) return showToast('Logo açıkken önce bir logo seç');
   state.processing = true; if ($('startBtn')) $('startBtn').disabled = true; if ($('stopBtn')) $('stopBtn').disabled = false; setStatus('İşlem sürüyor…', true); updateOverallStats();
   try {
     applyFormatToUI();
@@ -238,13 +272,13 @@ function presetPosition(pos) {
 function setupDrag() {
   const logo = $('logoOverlay'), stage = $('previewStage'); if (!logo || !stage) return;
   logo.addEventListener('pointerdown', event => { event.preventDefault(); const rect = stage.getBoundingClientRect(); state.drag = { startX: event.clientX, startY: event.clientY, x: numeric(state.settings.logoX, .74), y: numeric(state.settings.logoY, .05), rect }; logo.setPointerCapture(event.pointerId); logo.classList.add('dragging'); stage.classList.add('logo-editing'); });
-  logo.addEventListener('pointermove', event => { if (!state.drag) return; const { rect } = state.drag, dx = (event.clientX - state.drag.startX) / rect.width, dy = (event.clientY - state.drag.startY) / rect.height, width = numeric(state.settings.logoWidth, .22); state.settings.logoX = clamp(state.drag.x + dx, 0, 1 - width); state.settings.logoY = clamp(state.drag.y + dy, 0, 1 - logoHeightFraction(width)); positionLogo(); });
+  logo.addEventListener('pointermove', event => { if (!state.drag) return; const { rect } = state.drag, dx = (event.clientX - state.drag.startX) / rect.width, dy = (event.clientY - state.drag.startY) / rect.height; state.settings.logoX = state.drag.x + dx; state.settings.logoY = state.drag.y + dy; positionLogo(); });
   const end = () => { if (!state.drag) return; state.drag = null; logo.classList.remove('dragging'); stage.classList.remove('logo-editing'); window.primeAPI.saveSettings(state.settings); showToast('Logo konumu kaydedildi'); };
   logo.addEventListener('pointerup', end); logo.addEventListener('pointercancel', end);
 }
 
 on('chooseInput', 'click', chooseInput); on('chooseInputSmall', 'click', chooseInput); on('chooseInputLibrary', 'click', chooseInput);
-on('chooseLogo', 'click', chooseLogo); on('chooseLogoSettings', 'click', chooseLogo); on('chooseOutput', 'click', chooseOutput);
+on('chooseLogo', 'click', chooseLogo); on('chooseLogoSettings', 'click', chooseLogo); on('chooseOutput', 'click', chooseOutput); document.querySelectorAll('.logo-toggle').forEach(button => button.addEventListener('click', toggleLogo));
 document.querySelectorAll('.format-option').forEach(button => button.addEventListener('click', async () => {
   const format = getFormat(button.dataset.format);
   state.settings.outputFormat = format.key;
