@@ -23,6 +23,12 @@ function hashFile(filePath) {
 function safeName(name) {
   return name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_');
 }
+function cleanOutputStem(stem) {
+  const cleaned = safeName(stem)
+    .replace(/(?:[_\s-]+logo)?[_\s-]+(?:9x16|16x9)$/i, '')
+    .trim();
+  return cleaned || 'video';
+}
 
 function sendProgress(index, total, data) {
   send({ type: 'progress', index, total, ...data });
@@ -67,7 +73,15 @@ async function processOne(index, total, video, settings, historyHashes, ffmpegPa
     return skipped;
   }
 
-  const outputPath = path.join(outputDir, `${safeName(path.parse(video.name).name)}_logo_${canvas.suffix}.mp4`);
+  const formatOutputDir = path.join(outputDir, canvas.key === '16:9' ? '16x9' : '9x16');
+  fs.mkdirSync(formatOutputDir, { recursive: true });
+  const originalStem = cleanOutputStem(path.parse(video.name).name);
+  let outputPath = path.join(formatOutputDir, `${originalStem}.mp4`);
+  let collisionIndex = 1;
+  while (fs.existsSync(outputPath)) {
+    outputPath = path.join(formatOutputDir, `${originalStem} (${collisionIndex}).mp4`);
+    collisionIndex += 1;
+  }
   const filter = buildFilter(settings, 'primary');
   const args = ['-y', '-hide_banner', '-i', video.path, '-i', settings.logoPath, '-filter_complex', filter, '-map', '[out]', '-map', '0:a:0?', '-map_metadata', '0', '-c:v', 'libx264', '-preset', 'superfast', '-threads', '0', '-crf', '21', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2', '-af', 'aresample=async=1:first_pts=0', '-shortest', '-max_muxing_queue_size', '2048', '-movflags', '+faststart', outputPath];
   const job = { name: video.name, status: 'processing', progress: 0, message: 'Hazırlanıyor' };

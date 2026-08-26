@@ -1,3 +1,9 @@
+## v1.8.1 — Temiz çıktı başlıkları
+
+- Çıktı dosya adlarından `_logo_9x16` ve `_logo_16x9` ekleri kaldırıldı; başlıkta yalnızca orijinal video adı kullanılır.
+- 9:16 ve 16:9 çıktıları `Edilmiş Videolar\\9x16` ve `Edilmiş Videolar\\16x9` alt klasörlerinde saklanır; iki format birbirinin üzerine yazmaz.
+- Aynı adlı farklı videolarda güvenli çakışma numarası kullanılır ve gerçek çıktı yolu işlem sonucunda gösterilir.
+
 ## v1.8.0 — Çift format çıktı sistemi
 
 - Control Room ve Ayarlar ekranına çalışan 9:16 dikey / 16:9 yatay format seçici eklendi.
