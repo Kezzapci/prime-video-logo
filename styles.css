@@ -25,3 +25,16 @@
 .preset.is-disabled{pointer-events:none}
 .drag-note small{color:#70e298;letter-spacing:.45px}
 @media(max-width:680px){.composer-meta{flex-wrap:wrap}.composer-meta .logo-toggle{margin-left:0}.setting-actions{flex-wrap:wrap}}
+
+/* v1.8.4 automatic serial mode in the upper command segment */
+.serial-control{display:flex;align-items:center;gap:8px;min-height:48px;padding:5px 7px 5px 10px;border:1px solid rgba(255,200,76,.22);border-radius:10px;background:rgba(31,35,35,.48);transition:.22s var(--ease)}
+.serial-control.is-active{border-color:rgba(112,226,152,.58);background:linear-gradient(135deg,rgba(46,126,87,.2),rgba(19,44,49,.58));box-shadow:0 0 0 1px rgba(112,226,152,.08),0 8px 24px rgba(38,151,102,.12)}
+.serial-control-status{display:flex;align-items:center;gap:6px;white-space:nowrap}.serial-control-status small{color:#ad8f53;font-size:7px;letter-spacing:.75px}.serial-control.is-active .serial-control-status small{color:#8fe0a7}
+.serial-pulse{width:7px;height:7px;border-radius:50%;background:#927844;box-shadow:0 0 7px rgba(146,120,68,.5)}.serial-pulse.active{background:#70e298;box-shadow:0 0 11px rgba(112,226,152,.85);animation:serialPulse 1.8s ease-in-out infinite}
+.serial-control-actions{display:flex;gap:5px}.serial-control-actions .button{min-height:32px;padding:7px 10px;font-size:9px;white-space:nowrap}.serial-control-actions .button-dark{padding-left:8px;padding-right:8px}
+.serial-control .serial-active{border-color:rgba(112,226,152,.72);background:linear-gradient(135deg,rgba(46,126,87,.56),rgba(20,91,72,.65));color:#eaffef;box-shadow:0 0 15px rgba(71,194,127,.16)}
+.queue-actions-note{justify-content:flex-start;min-height:42px;color:#64838f;font-size:8px}.queue-actions-note .serial-inline-mark{color:#70e298;font-size:12px}.queue-actions-note span:last-child{letter-spacing:.25px}
+@keyframes serialPulse{0%,100%{opacity:.62;transform:scale(.88)}50%{opacity:1;transform:scale(1.12)}}
+@media(max-width:1240px){.serial-control{order:4}.serial-control-status{display:none}.serial-control-actions .button{font-size:8px;padding-left:8px;padding-right:8px}}
+@media(max-width:900px){.serial-control{order:4;flex:1;min-width:245px}.serial-control-status{display:flex}.serial-control-actions{flex:1}.serial-control-actions .button{flex:1}}
+@media(max-width:680px){.serial-control{width:100%;min-width:0;justify-content:space-between}.serial-control-status{display:flex}.serial-control-actions .button{font-size:8px}.queue-actions-note{min-height:36px}}

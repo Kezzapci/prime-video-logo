@@ -1,3 +1,11 @@
+## v1.8.4 — Seri Modu ile otomatik edit
+
+- Üst Control Room segmentine görünür `Seriyi başlat / Seri aktif` ve `Durdur` kontrolleri taşındı.
+- Seri Modu aktifken kaynak klasöre sonradan gelen desteklenen video dosyaları otomatik taranır, kopyalama tamamlanana kadar bekletilir ve doğrudan sırayla editlenir.
+- Yeni dosyalar mevcut 500+ video kuyruğunun ilerlemesini ve thumbnail önbelleğini bozmadan işlenir; worker ilerlemesi doğru video satırına bağlanır.
+- Seri Modu ayarı kalıcıdır; uygulama yeniden açıldığında seçili klasörü yeniden izler. Kapatıldığında bekleyen otomatik işler temizlenir ve aktif worker güvenli şekilde durdurulur.
+- SHA-256 tekrar koruması, seçili 9:16 / 16:9 format, ses koruma, logo Açık/Kapalı ve otomatik güncelleme akışları korunur.
+
 ## v1.8.3 — Otomatik kaynak klasörü izleme
 
 - Seçilen kaynak klasörü uygulama açık olduğu sürece arka planda izlenir; sonradan eklenen, taşınan veya güncellenen desteklenen video dosyaları debounce edilmiş yeni taramayla otomatik listeye alınır.

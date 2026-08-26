@@ -41,6 +41,7 @@ function ensureDataFiles() {
     fitMode: 'cover',
     margin: 0.04,
     logoEnabled: true,
+    serialMode: false,
     outputFormat: '9:16'
   }, null, 2));
   else {
@@ -51,6 +52,7 @@ function ensureDataFiles() {
     if (saved.logoX === 0.74 && saved.logoY === 0.05 && saved.logoWidth === 0.22) { saved.logoX = 0.11; saved.logoY = 0.68; saved.logoWidth = 0.78; changed = true; }
     if (!['9:16', '16:9'].includes(saved.outputFormat)) { saved.outputFormat = '9:16'; changed = true; }
     if (typeof saved.logoEnabled !== 'boolean') { saved.logoEnabled = true; changed = true; }
+    if (typeof saved.serialMode !== 'boolean') { saved.serialMode = false; changed = true; }
     if (changed) writeJson(settingsPath, saved);
   }
 }
@@ -450,8 +452,31 @@ ipcMain.handle('scan-folder', async (_event, folderPath) => {
   return fs.readdirSync(folderPath).filter(isVideo).sort((left, right) => left.localeCompare(right, 'tr')).map(name => ({ name, path: path.join(folderPath, name) }));
 });
 ipcMain.handle('watch-source-folder', (_event, folderPath) => startSourceFolderWatcher(folderPath));
+ipcMain.handle('wait-for-videos-ready', async (_event, filePaths = []) => {
+  const candidates = [...new Set((Array.isArray(filePaths) ? filePaths : []).filter(file => typeof file === 'string' && isVideo(file)))];
+  const deadline = Date.now() + 30000;
+  const stable = new Map();
+  let stableReady = [];
+  while (candidates.length && Date.now() < deadline) {
+    const ready = [];
+    for (const file of candidates) {
+      try {
+        const stat = fs.statSync(file);
+        if (!stat.isFile() || stat.size <= 0) { stable.delete(file); continue; }
+        const signature = `${stat.size}:${Math.floor(stat.mtimeMs)}`;
+        const previous = stable.get(file);
+        if (previous === signature) ready.push(file);
+        else stable.set(file, signature);
+      } catch { stable.delete(file); }
+    }
+    stableReady = ready;
+    if (ready.length === candidates.length) return ready;
+    await new Promise(resolve => setTimeout(resolve, 700));
+  }
+  return stableReady.filter(file => fs.existsSync(file));
+});
 ipcMain.handle('save-settings', (_event, settings = {}) => {
-  const normalized = { ...settings, inputPath: typeof settings.inputPath === 'string' ? settings.inputPath : '', outputPath: normalizeOutputPath(settings.outputPath), outputFormat: settings.outputFormat === '16:9' ? '16:9' : '9:16', logoEnabled: settings.logoEnabled !== false };
+  const normalized = { ...settings, inputPath: typeof settings.inputPath === 'string' ? settings.inputPath : '', outputPath: normalizeOutputPath(settings.outputPath), outputFormat: settings.outputFormat === '16:9' ? '16:9' : '9:16', logoEnabled: settings.logoEnabled !== false, serialMode: settings.serialMode === true };
   writeJson(settingsPath, normalized);
   return normalized;
 });

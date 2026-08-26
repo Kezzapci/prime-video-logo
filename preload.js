@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('primeAPI', {
   chooseLogo: () => ipcRenderer.invoke('choose-logo'),
   scanFolder: folder => ipcRenderer.invoke('scan-folder', folder),
   watchSourceFolder: folder => ipcRenderer.invoke('watch-source-folder', folder),
+  waitForVideosReady: files => ipcRenderer.invoke('wait-for-videos-ready', files),
   saveSettings: settings => ipcRenderer.invoke('save-settings', settings),
   openOutput: folder => ipcRenderer.invoke('open-output', folder),
   openReleasePage: () => ipcRenderer.invoke('open-release-page'),

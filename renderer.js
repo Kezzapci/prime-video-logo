@@ -1,6 +1,6 @@
 const state = {
   settings: {}, history: [], videos: [], processing: false, activeVideo: null, drag: null,
-  health: null, inputPath: '', sourceWatchStatus: 'idle', thumbCache: new Map(), thumbLoading: new Set(), thumbQueue: [],
+  health: null, inputPath: '', sourceWatchStatus: 'idle', serialRunning: false, serialKickTimer: null, serialPendingPaths: new Set(), thumbCache: new Map(), thumbLoading: new Set(), thumbQueue: [],
   thumbInFlight: 0, queueProgress: new Map()
 };
 
@@ -54,9 +54,28 @@ function applyLogoState() {
   ['sizeSlider', 'opacitySlider'].forEach(id => { if ($(id)) $(id).disabled = !enabled; });
   if ($('logoStateText')) $('logoStateText').textContent = enabled ? 'BuildBrk overlay etkin' : 'BuildBrk overlay kapalı';
 }
+function serialModeEnabled() {
+  return state.settings?.serialMode === true;
+}
+function applySerialModeUI() {
+  const enabled = serialModeEnabled();
+  const start = $('startBtn'), stop = $('stopBtn'), control = $('serialControl');
+  if (control) control.classList.toggle('is-active', enabled);
+  if (start) {
+    start.classList.toggle('serial-active', enabled);
+    start.setAttribute('aria-pressed', String(enabled));
+    start.innerHTML = enabled ? '<span>●</span> Seri aktif' : '<span>▶</span> Seriyi başlat';
+    start.title = enabled ? 'Seri Modu kapat' : 'Seri Modu aç';
+  }
+  if (stop) stop.disabled = !enabled && !state.processing;
+  if ($('serialPulse')) $('serialPulse').classList.toggle('active', enabled);
+  if ($('serialModeStatus')) $('serialModeStatus').textContent = enabled ? (state.processing ? 'SERİ İŞLEM AKTİF' : 'KLASÖR İZLENİYOR') : 'SERİ MODU KAPALI';
+  if ($('serialQueueHint')) $('serialQueueHint').textContent = enabled ? 'Yeni video gelince otomatik editlenir.' : 'Seri Modu üst panelden yönetilir.';
+}
 function applySettingsToUI() {
   const s = state.settings || {};
   s.logoEnabled = s.logoEnabled !== false;
+  s.serialMode = s.serialMode === true;
   state.inputPath = s.inputPath || state.inputPath || '';
   if ($('inputPath')) $('inputPath').value = state.inputPath || '';
   const outputPath = s.outputPath || 'Masaüstü\\Edilmiş Videolar';
@@ -70,7 +89,7 @@ function applySettingsToUI() {
   if ($('opacityValue')) $('opacityValue').textContent = `${$('opacitySlider')?.value || 100}%`;
   updateRangeFill($('sizeSlider')); updateRangeFill($('opacitySlider')); positionLogo();
   if (s.logoPath && $('logoOverlay')) $('logoOverlay').src = toFileUrl(s.logoPath);
-  applyLogoState();
+  applyLogoState(); applySerialModeUI();
 }
 function applyFormatToUI() {
   const format = getFormat(state.settings?.outputFormat);
@@ -184,9 +203,13 @@ async function scanInputFolder({ resetQueue = false, silent = false } = {}) {
     state.queueProgress.clear();
     state.videos.forEach((video, index) => { const progress = previousProgress.get(video.path); if (progress) state.queueProgress.set(index, progress); });
     if (state.activeVideo) state.activeVideo = state.videos.find(video => video.path === state.activeVideo.path) || null;
+    const currentPaths = new Set(state.videos.map(video => video.path));
+    for (const pendingPath of state.serialPendingPaths) if (!currentPaths.has(pendingPath)) state.serialPendingPaths.delete(pendingPath);
     state.sourceWatchStatus = 'watching'; renderVideoList(resetQueue, resetQueue);
-    const newCount = state.videos.filter(video => !previousPaths.has(video.path)).length;
-    if (!silent && newCount > 0) showToast(`${newCount.toLocaleString('tr-TR')} yeni video bulundu ve kuyruğa eklendi`);
+    const addedVideos = state.videos.filter(video => !previousPaths.has(video.path));
+    if (serialModeEnabled()) addedVideos.forEach(video => state.serialPendingPaths.add(video.path));
+    if (!silent && addedVideos.length > 0) showToast(`${addedVideos.length.toLocaleString('tr-TR')} yeni video bulundu ve kuyruğa eklendi`);
+    if (serialModeEnabled() && addedVideos.length) scheduleSerialKick();
     return state.videos;
   } catch (error) {
     state.sourceWatchStatus = 'error'; renderVideoList(false);
@@ -195,6 +218,66 @@ async function scanInputFolder({ resetQueue = false, silent = false } = {}) {
     return [];
   }
 }
+function scheduleSerialKick(delay = 350) {
+  if (state.serialKickTimer) clearTimeout(state.serialKickTimer);
+  if (!serialModeEnabled()) { state.serialKickTimer = null; return; }
+  state.serialKickTimer = setTimeout(() => { state.serialKickTimer = null; runSerialQueue(); }, delay);
+}
+async function runSerialQueue() {
+  if (!serialModeEnabled() || state.serialRunning || state.processing || !state.inputPath) return;
+  if (logoIsEnabled() && !state.settings.logoPath) { showToast('Seri Modu bekliyor: Logo açıkken önce bir logo seç'); return; }
+  state.serialRunning = true; applySerialModeUI();
+  try {
+    while (serialModeEnabled() && state.serialPendingPaths.size) {
+      if (logoIsEnabled() && !state.settings.logoPath) { showToast('Seri Modu bekliyor: Logo açıkken önce bir logo seç'); break; }
+      const pendingPaths = [...state.serialPendingPaths];
+      const readyPaths = await window.primeAPI.waitForVideosReady(pendingPaths);
+      if (!serialModeEnabled() || !readyPaths.length) break;
+      readyPaths.forEach(videoPath => state.serialPendingPaths.delete(videoPath));
+      const readySet = new Set(readyPaths);
+      const batch = state.videos.filter(video => readySet.has(video.path));
+      if (!batch.length) continue;
+      renderVideoList(false);
+      const result = await startProcessing(batch);
+      if (result === null) { batch.forEach(video => state.serialPendingPaths.add(video.path)); break; }
+    }
+  } catch (error) {
+    window.primeAPI.reportError({ message: 'Seri Modu otomatik işlem hatası', stack: error?.stack });
+    showToast('Yeni video otomatik işlenemedi; teknik kayıt tutuldu.');
+  } finally {
+    state.serialRunning = false; applySerialModeUI();
+    if (serialModeEnabled() && state.serialPendingPaths.size) scheduleSerialKick(2200);
+  }
+}
+async function setSerialMode(enabled) {
+  const previous = serialModeEnabled();
+  if (enabled && !state.inputPath) { showToast('Seri Modu için önce kaynak klasörü seç'); return false; }
+  state.settings.serialMode = enabled; applySerialModeUI();
+  try {
+    state.settings = await window.primeAPI.saveSettings(state.settings);
+    if (enabled) {
+      const watch = await window.primeAPI.watchSourceFolder(state.inputPath);
+      if (!watch?.ok) throw new Error(watch.message || 'Kaynak klasörü izlenemedi.');
+      if (!state.videos.length) await scanInputFolder({ resetQueue: true, silent: true });
+      else { state.videos.forEach(video => state.serialPendingPaths.add(video.path)); scheduleSerialKick(); }
+      showToast('Seri Modu aktif · yeni videolar otomatik editlenecek');
+    } else {
+      if (state.serialKickTimer) { clearTimeout(state.serialKickTimer); state.serialKickTimer = null; }
+      state.serialPendingPaths.clear();
+      if (state.processing) await window.primeAPI.stopProcessing();
+      showToast('Seri Modu durduruldu');
+    }
+    applySettingsToUI();
+    return true;
+  } catch (error) {
+    state.settings.serialMode = previous; applySerialModeUI();
+    try { state.settings = await window.primeAPI.saveSettings(state.settings); } catch { /* geri alma da başarısızsa geçici state korunur */ }
+    window.primeAPI.reportError({ message: 'Seri Modu kaydedilemedi', stack: error?.stack });
+    showToast('Seri Modu başlatılamadı. Klasör ve ayarlar kontrol ediliyor.');
+    return false;
+  }
+}
+async function toggleSerialMode() { return setSerialMode(!serialModeEnabled()); }
 async function chooseInput() {
   const folder = await window.primeAPI.chooseFolder('input'); if (!folder) return;
   state.inputPath = folder; state.settings.inputPath = folder; if ($('inputPath')) $('inputPath').value = folder; setStatus('Klasör taranıyor…', true);
@@ -221,6 +304,7 @@ async function chooseOutput() {
 async function chooseLogo() {
   const logo = await window.primeAPI.chooseLogo(); if (!logo) return;
   await updateSetting('logoPath', logo); applySettingsToUI(); showToast('Logo güncellendi · Video üstünde istediğin yere taşı');
+  if (serialModeEnabled() && state.serialPendingPaths.size) scheduleSerialKick();
 }
 async function toggleLogo() {
   const previous = logoIsEnabled();
@@ -253,7 +337,7 @@ function applyQueueData(element, data) {
   if (bar) { bar.style.width = `${data.progress || 0}%`; bar.style.background = data.status === 'done' ? '#70e298' : data.status === 'skipped' ? '#738795' : data.status === 'error' ? '#e05656' : ''; }
   if (stateEl) { stateEl.textContent = data.status === 'skipped' ? 'Atlandı · Daha önce işlendi' : data.status === 'error' ? data.message || 'Çıktı oluşturulamadı' : data.message || 'İşleniyor'; stateEl.className = `queue-state state-${['done','skipped','processing','error'].includes(data.status) ? data.status : 'wait'}`; }
 }
-function updateQueue(data) { if (Number.isFinite(data.index)) state.queueProgress.set(data.index, data); applyQueueData(document.querySelector(`[data-queue="${data.index}"]`), data); updateOverallStats(); }
+function updateQueue(data) { const index = data?.path ? state.videos.findIndex(video => video.path === data.path) : data?.index; if (!Number.isFinite(index) || index < 0) return; const mapped = { ...data, index }; state.queueProgress.set(index, mapped); applyQueueData(document.querySelector(`[data-queue="${index}"]`), mapped); updateOverallStats(); }
 function updateBanner(title, message, action, actionText) { const banner = $('updateBanner'); if (!banner) return; banner.classList.remove('hidden'); $('updateTitle').textContent = title; $('updateMessage').textContent = message; const button = $('updateActionBtn'); button.dataset.action = action || ''; button.textContent = actionText || 'Kapat'; button.disabled = !action; }
 function handleUpdateStatus(data) {
   if (!data) return;
@@ -276,21 +360,25 @@ async function autoRepair(silent = false) {
   catch (error) { window.primeAPI.reportError({ message: 'Otomatik onarım başarısız', stack: error?.stack }); showToast('Sistem onarımı tamamlanamadı. Teknik kayıt tutuldu.'); }
   finally { if (button) { button.disabled = false; button.innerHTML = '<span>✦</span> Sistemi tara ve onar'; } }
 }
-async function startProcessing() {
-  if (state.processing) return; if (!state.videos.length) return showToast('Önce bir video klasörü seç'); if (logoIsEnabled() && !state.settings.logoPath) return showToast('Logo açıkken önce bir logo seç');
-  state.processing = true; if ($('startBtn')) $('startBtn').disabled = true; if ($('stopBtn')) $('stopBtn').disabled = false; setStatus('İşlem sürüyor…', true); updateOverallStats();
+async function startProcessing(batchOverride = null) {
+  if (state.processing) return null;
+  const batch = Array.isArray(batchOverride) ? batchOverride : state.videos;
+  if (!batch.length) { if (!batchOverride) showToast('Önce bir video klasörü seç'); return null; }
+  if (logoIsEnabled() && !state.settings.logoPath) { if (!batchOverride) showToast('Logo açıkken önce bir logo seç'); return null; }
+  state.processing = true; if ($('startBtn')) $('startBtn').disabled = true; if ($('stopBtn')) $('stopBtn').disabled = false; setStatus('İşlem sürüyor…', true); applySerialModeUI(); updateOverallStats();
   try {
     applyFormatToUI();
     await window.primeAPI.saveSettings(state.settings);
-    const results = await window.primeAPI.processVideos({ videos: state.videos, settings: state.settings });
+    const results = await window.primeAPI.processVideos({ videos: batch, settings: state.settings });
     state.history = (await window.primeAPI.getInitialState()).history; renderHistory();
     const list = Array.isArray(results) ? results : [], done = list.filter(item => item?.status === 'done').length, skipped = list.filter(item => item?.status === 'skipped').length, errors = list.filter(item => item?.status === 'error').length;
     if (errors) { showToast(`${errors} video yazılamadı; çıktı klasörü ve teknik kayıtları kontrol et`); setStatus('Kontrol gerekli'); }
     else if (done) { showToast(`${done} video Edilmiş Videolar klasörüne kaydedildi`); setStatus('Tamamlandı'); }
     else if (skipped) { showToast(`${skipped} video daha önce işlendi; yeni çıktı oluşturulmadı`); setStatus('Güncel'); }
     else { showToast('İşlem sonucu alınamadı; teknik kayıtları kontrol et'); setStatus('Kontrol gerekli'); }
-  } catch (error) { window.primeAPI.reportError({ message: 'Video işleme hatası', stack: error?.stack }); showToast(error?.message || 'Video işlenemedi. Çıktı klasörü kontrol edilemedi.'); setStatus('Onarım gerekli'); await autoRepair(true); }
-  finally { state.processing = false; if ($('startBtn')) $('startBtn').disabled = false; if ($('stopBtn')) $('stopBtn').disabled = true; updateOverallStats(); }
+    return list;
+  } catch (error) { window.primeAPI.reportError({ message: 'Video işleme hatası', stack: error?.stack }); showToast(error?.message || 'Video işlenemedi. Çıktı klasörü kontrol edilemedi.'); setStatus('Onarım gerekli'); await autoRepair(true); return null; }
+  finally { state.processing = false; if ($('startBtn')) $('startBtn').disabled = false; if ($('stopBtn')) $('stopBtn').disabled = true; applySerialModeUI(); updateOverallStats(); if (serialModeEnabled() && state.serialPendingPaths.size) scheduleSerialKick(250); }
 }
 function renderHistory() {
   if (!$('historyList')) return;
@@ -321,7 +409,7 @@ document.querySelectorAll('.format-option').forEach(button => button.addEventLis
   showToast(`Çıktı formatı ${format.label} · ${format.dimensions} olarak ayarlandı`);
 }));
 on('openOutputFolder', 'click', async () => { const folder = state.settings.outputPath || ''; const error = await window.primeAPI.openOutput(folder); showToast(error ? 'Çıktı klasörü açılamadı' : `Çıktı klasörü açıldı: ${shortPath(folder)}`); });
-on('startBtn', 'click', startProcessing); on('stopBtn', 'click', async () => { await window.primeAPI.stopProcessing(); showToast('İşlem güvenli şekilde durduruluyor…'); });
+on('startBtn', 'click', toggleSerialMode); on('stopBtn', 'click', async () => { if (serialModeEnabled()) await setSerialMode(false); else { await window.primeAPI.stopProcessing(); showToast('İşlem güvenli şekilde durduruluyor…'); } });
 on('windowMinimize', 'click', () => window.primeAPI.minimizeWindow()); on('windowMaximize', 'click', () => window.primeAPI.toggleMaximize()); on('windowClose', 'click', () => window.primeAPI.closeWindow());
 on('sizeSlider', 'input', event => { state.settings.logoWidth = Number(event.target.value) / 100; if ($('sizeValue')) $('sizeValue').textContent = `${event.target.value}%`; updateRangeFill(event.target); positionLogo(); });
 on('sizeSlider', 'change', () => window.primeAPI.saveSettings(state.settings)); on('opacitySlider', 'input', event => { state.settings.opacity = Number(event.target.value) / 100; if ($('opacityValue')) $('opacityValue').textContent = `${event.target.value}%`; updateRangeFill(event.target); positionLogo(); });
